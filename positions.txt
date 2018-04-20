@@ -1,0 +1,3 @@
+first_digit = {'top': 143, 'left': 806, 'width': 20, 'height': 21}
+second_digit = {'top': 143, 'left': 826, 'width': 20, 'height': 21}
+third_digit = {'top': 143, 'left': 846, 'width': 20, 'height': 21}
