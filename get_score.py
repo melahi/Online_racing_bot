@@ -3,33 +3,40 @@
 import mss
 import mss.tools
 import cv2
-import time
 import numpy as np
+import win32com.client
 
 
 class ScoreGrabber:
     def __init__(self):
-        self.first_digit_position = {'top': 144, 'left': 806, 'width': 20, 'height': 20}
-        self.second_digit_position = {'top': 144, 'left': 826, 'width': 20, 'height': 20}
-        self.third_digit_position = {'top': 144, 'left': 846, 'width': 20, 'height': 20}
+        self.width_image = 20
+        self.height_image = 20
+        y_position = 152
+        x_positions = [875, 897, 919]
+        self.digits_position = list()
+        for x_position in x_positions:
+            self.digits_position.append({'top': y_position,
+                                         'left': x_position,
+                                         'width': self.width_image,
+                                         'height': self.height_image})
         self.screen_shot = mss.mss()
+        # Correcting BlueStacks frame
+        auto_it = win32com.client.Dispatch("AutoItX3.Control")
+        auto_it.WinMove("BlueStacks", "", 0, 0, 950, 700)
 
     def grab_scores(self):
-        counter = 0
-        while counter < 500:
-            grabbed_screen = self.screen_shot.grab(self.second_digit_position)
-            mss.tools.to_png(grabbed_screen.rgb, grabbed_screen.size, output='{}.png'.format(counter))
-            time.sleep(0.5)
-            counter += 1
+        grabbed_score = np.ndarray(shape=[len(self.digits_position), self.width, self.height, 3])
+        while True:
+            for (i, digit_position) in enumerate(self.digits_position):
+                grabbed_digit = np.array(self.screen_shot.grab(digit_position))
+                grabbed_score[i, :, :, :] = cv2.cvtColor(grabbed_digit, cv2.COLOR_BGRA2RGB)
+            yield grabbed_score.copy()
 
     def get_score_and_display_it(self):
         while True:
-            first_digit_grabbed = np.array(self.screen_shot.grab(self.first_digit_position))
-            second_digit_grabbed = np.array(self.screen_shot.grab(self.second_digit_position))
-            third_digit_grabbed = np.array(self.screen_shot.grab(self.third_digit_position))
-            cv2.imshow('first', first_digit_grabbed)
-            cv2.imshow('second', second_digit_grabbed)
-            cv2.imshow('third', third_digit_grabbed)
+            for (i, digit_position) in enumerate(self.digits_position):
+                digit_grabbed = np.array(self.screen_shot.grab(digit_position))
+                cv2.imshow(str(i), digit_grabbed)
             if cv2.waitKey(25) & 0xFF == ord('q'):
                 cv2.destroyAllWindows()
                 break
