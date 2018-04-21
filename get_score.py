@@ -1,22 +1,11 @@
 # In the name of God
 
-from pymouse import PyMouseEvent
-
-
-class MouseEventHandler(PyMouseEvent):
-    def __init__(self):
-        super().__init__()
-
-    def click(self, x, y, button, press):
-        print("x position: %d, y position: %d, button: %s, press: %s" % (x, y, button, press))
-
-
-
 import mss
 import mss.tools
 import cv2
 import time
 import numpy as np
+
 
 class ScoreGrabber:
     def __init__(self):
@@ -49,7 +38,7 @@ class ScoreGrabber:
 def main():
     score_grabber = ScoreGrabber()
     score_grabber.get_score_and_display_it()
-    score_grabber.grab_scores()
+    # score_grabber.grab_scores()
 
 
 if __name__ == "__main__":

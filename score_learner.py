@@ -23,17 +23,16 @@ class ScoreImageReader:
     def dataset_from_file(self, path, repeat_count=None):
         features, labels = self.__reading_images(path)
         training_dataset = tf.data.Dataset.from_tensor_slices((features, labels))
-        return training_dataset.shuffle(30).batch(10).repeat(repeat_count)
+        return training_dataset.shuffle(30).repeat(repeat_count).batch(100)
 
 
 class ScoreReader:
     def __init__(self):
         self.number_of_conv_filters = 8
-        self.dense_units = 50
+        self.dense_units = 64
         output = "score_reader_{}_{}".format(self.number_of_conv_filters, self.dense_units)
         self.model = tf.estimator.Estimator(model_fn=self.model_fn, model_dir=output)
-        self.batch_size = 10
-        self.steps = 1000
+        self.steps = 100
         self.image_reader = ScoreImageReader()
 
     def model_fn(self, features, labels, mode):
