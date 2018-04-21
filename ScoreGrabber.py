@@ -25,7 +25,8 @@ class ScoreGrabber:
         auto_it.WinMove("BlueStacks", "", 0, 0, 950, 700)
 
     def grab_scores(self):
-        grabbed_score = np.ndarray(shape=[len(self.digits_position), self.width, self.height, 3])
+        grabbed_score = np.ndarray(shape=[len(self.digits_position), self.width_image, self.height_image, 3],
+                                   dtype=np.uint8)
         while True:
             for (i, digit_position) in enumerate(self.digits_position):
                 grabbed_digit = np.array(self.screen_shot.grab(digit_position))
@@ -33,10 +34,9 @@ class ScoreGrabber:
             yield grabbed_score.copy()
 
     def get_score_and_display_it(self):
-        while True:
-            for (i, digit_position) in enumerate(self.digits_position):
-                digit_grabbed = np.array(self.screen_shot.grab(digit_position))
-                cv2.imshow(str(i), digit_grabbed)
+        for grabbed_digits in self.grab_scores():
+            for (i, grabbed_digit) in enumerate(grabbed_digits):
+                cv2.imshow(str(i), grabbed_digit)
             if cv2.waitKey(25) & 0xFF == ord('q'):
                 cv2.destroyAllWindows()
                 break

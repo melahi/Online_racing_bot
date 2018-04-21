@@ -4,6 +4,7 @@ import tensorflow as tf
 import numpy as np
 import os
 import cv2
+from ScoreGrabber import ScoreGrabber
 
 
 class ScoreImageReader:
@@ -74,12 +75,30 @@ class ScoreReader:
         for prediction in predictions:
             print(prediction)
 
+    def predict_and_save(self, generator, saving_path):
+        output_directory = ["{}/{}/".format(saving_path, i) for i in range(0, 10)]
+        counter = [0] * 10
+
+        # Creating directories for storing images in corresponding class.
+        for directory in output_directory:
+            if not os.path.exists(directory):
+                os.mkdir(directory)
+
+        for images in generator:
+            predictions = self.model.predict(input_fn=lambda: tf.data.Dataset.from_tensors(tf.cast(images, tf.float16)))
+            for (i, prediction) in enumerate(predictions):
+                cv2.imwrite("{}{}.png".format(output_directory[prediction['class']], counter[prediction['class']]),
+                            images[i])
+                counter[prediction['class']] += 1
+
 
 def main():
     print("initializing")
     score_reader = ScoreReader()
-    score_reader.training(path="./scores/")
-    score_reader.predicting(path="./scores/")
+    # score_reader.training(path="./scores/")
+    # score_reader.predicting(path="./scores/")
+    score_grabber = ScoreGrabber()
+    score_reader.predict_and_save(score_grabber.grab_scores(), "grabbed_score")
 
 
 if __name__ == "__main__":
