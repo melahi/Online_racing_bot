@@ -5,6 +5,7 @@ import mss.tools
 import cv2
 import numpy as np
 import win32com.client
+import os
 
 
 class ScoreGrabber:
@@ -40,6 +41,17 @@ class ScoreGrabber:
             if cv2.waitKey(25) & 0xFF == ord('q'):
                 cv2.destroyAllWindows()
                 break
+
+    @staticmethod
+    def reading_images(path):
+        features = []
+        labels = []
+        for class_directory in os.listdir(path):
+            for dir_path, _, file_names in os.walk(os.path.join(path, class_directory)):
+                for file_name in file_names:
+                    features.append(cv2.imread(os.path.join(dir_path, file_name)))
+                    labels.append(int(class_directory))
+        return np.asarray(features, dtype=np.float16), np.asarray(labels, dtype=np.int32)
 
 
 def main():

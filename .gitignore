@@ -2,3 +2,4 @@
 venv/
 score_reader*/
 grabbed_score/
+__pycache__/
