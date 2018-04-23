@@ -2,4 +2,6 @@
 venv/
 score_reader*/
 grabbed_score/
+grabbed_score_new
 __pycache__/
+Memory_collection/
