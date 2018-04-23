@@ -1,9 +1,11 @@
 import cv2
 import os
 
+from Action import Action
+
 
 class Experience:
-    def __init__(self, screen=None, speed=None, action=None, reward=0):
+    def __init__(self, screen=None, speed=None, action=None):
         # In Reinforcement Learning terminology, state includes screen and speed
         self.screen = screen
         self.speed = speed
@@ -38,3 +40,27 @@ class Memory:
         for i in range(length):
             screen_file_path = os.path.join(recording_path, "{}.png".format(i))
             experiences[i].record(screen_file_path, speed_file, action_file)
+
+    def remember_experiences(self):
+        experiences = []
+        for directory in os.listdir(self.path):
+            experiences_path = os.path.join(self.path, directory)
+            speed_file = open(os.path.join(experiences_path, "speed_file.txt"), mode="r")
+            speeds = [int(line.strip()) for line in speed_file]
+            action_file = open(os.path.join(experiences_path, "action_file.txt"), mode="r")
+            actions = [Action() for _ in range(len(speeds))]
+            for i, line in enumerate(action_file):
+                actions[i].from_string(line)
+            images = []
+            for i in range(len(speeds)):
+                images.append(cv2.imread(os.path.join(experiences_path, "{}.png".format(i))))
+
+            for i in range(len(speeds)):
+                experiences.append(Experience(screen=images[i], speed=speeds[i], action=actions[i]))
+
+        return experiences
+
+
+
+
+

@@ -15,7 +15,7 @@ class Action:
     def to_string(self):
         return "{},{},{},{},{}".format(self.accelerate, self.brake, self.left, self.right, self.turbo)
 
-    def from_string(self, string: str):
+    def from_string(self, string):
         parsed_string = string.split(sep=',')
         self.accelerate = bool(parsed_string[0])
         self.brake = bool(parsed_string[1])
@@ -24,6 +24,12 @@ class Action:
         self.turbo = bool(parsed_string[4])
 
     def apply(self):
+        print("=======================")
+        print("accel: {}".format(self.accelerate))
+        print(self.brake)
+        print(self.left)
+        print(self.right)
+        print(self.turbo)
         self.auto_it.Send("{%s %s}" % (self.key["accelerate"], self.pressing[self.accelerate]))
         self.auto_it.Send("{%s %s}" % (self.key["brake"], self.pressing[self.brake]))
         self.auto_it.Send("{%s %s}" % (self.key["left"], self.pressing[self.left]))

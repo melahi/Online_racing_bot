@@ -74,9 +74,9 @@ class ScoreReader:
 def main():
     print("initializing")
     score_reader = ScoreReader()
-    # score_reader.training(path="./grabbed_score/")
-    score_grabber = ScreenGrabber()
-    score_reader.predict_and_save(score_grabber.grab_scores_generator(), "grabbed_score_new/")
+    score_reader.training(path="./grabbed_score/")
+    # score_grabber = ScreenGrabber()
+    # score_reader.predict_and_save(score_grabber.grab_scores_generator(), "grabbed_score_new/")
 
 
 if __name__ == "__main__":
