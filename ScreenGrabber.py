@@ -8,8 +8,8 @@ import os
 
 class ScreenGrabber:
     def __init__(self):
-        grabbed_image_width = 20
-        grabbed_image_height = 20
+        digit_image_width = 20
+        digit_image_height = 20
         self.image_width = 10
         self.image_height = 10
         y_position = 152
@@ -18,9 +18,9 @@ class ScreenGrabber:
         for x_position in x_positions:
             self.digits_position.append({'top': y_position,
                                          'left': x_position,
-                                         'width': grabbed_image_width,
-                                         'height': grabbed_image_height})
-        self.screen_position = {'top': 50, 'left': 10, 'width': 1075, 'height': 600}
+                                         'width': digit_image_width,
+                                         'height': digit_image_height})
+        self.screen_position = {'top': 50, 'left': 10, 'width': 1072, 'height': 600}
         self.screen_shot = mss.mss()
         # Correcting BlueStacks frame
         auto_it = win32com.client.Dispatch("AutoItX3.Control")
