@@ -1,3 +1,5 @@
+from random import randrange
+
 from Action import Action, ActionType
 import tensorflow as tf
 
@@ -60,7 +62,12 @@ class DecisionMaker:
         print("mode == tf.estimator.ModeKeys.EVAL was not supporting for decision making")
         exit(9)
 
+    @staticmethod
+    def making_random_decision():
+        return Action(action_type=ActionType(randrange(len(ActionType))))
+
     def making_decision(self, screen, speed):
+        return self.making_random_decision()
         features = {'screen': screen, 'speed': speed}
         predictions = self.model.predict(input_fn=lambda: tf.data.Dataset.from_tensors(features))
         return Action(action_type=ActionType(next(predictions)['action_type']))
