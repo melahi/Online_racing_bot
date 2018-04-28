@@ -7,9 +7,9 @@ import tensorflow as tf
 class DecisionMaker:
     def __init__(self, screen_width, screen_height):
         self.steps = 1
-        self.conv_layers_kernel_size = [3, 3, 3, 3, 3, 3, 3]
-        self.conv_layers_filters = [16, 32, 32, 32, 16, 16, 16]
-        self.dense_units = [1024, 512]
+        self.conv_layers_kernel_size = [3, 3, 3]
+        self.conv_layers_filters = [64, 62, 64]
+        self.dense_units = [200, 200]
         output = "decision_maker"
         for i in range(len(self.conv_layers_filters)):
             output += "_conv_{}_{}".format(self.conv_layers_kernel_size[i], self.conv_layers_filters[i])

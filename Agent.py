@@ -15,7 +15,7 @@ class Agent:
         self.continue_playing = False
         self.decision_maker = DecisionMaker(screen_width=self.screen_grabber.screen_position['width'],
                                             screen_height=self.screen_grabber.screen_position['height'])
-        self.maximum_length_of_experience = 10
+        self.maximum_length_of_experience = 500
         self.memory = Memory()
 
     def playing(self, record_experience):
