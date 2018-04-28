@@ -1,5 +1,6 @@
 import cv2
 import os
+import numpy as np
 
 from Action import Action
 
@@ -12,7 +13,7 @@ class Experience:
         self.action = action
 
     def record(self, screen_file_name, speed_file, action_file):
-        cv2.imwrite(screen_file_name, self.screen)
+        cv2.imwrite(screen_file_name, np.reshape(self.screen, newshape=[self.screen.shape[1], self.screen.shape[2]]))
         speed_file.write(str(self.speed) + "\n")
         action_file.write(self.action.to_string() + "\n")
 

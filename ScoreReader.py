@@ -3,6 +3,8 @@ from hashlib import sha1
 import os
 import cv2
 from ScreenGrabber import ScreenGrabber
+import numpy as np
+
 
 
 class ScoreReader:
@@ -65,9 +67,9 @@ class ScoreReader:
     def read_score(self):
         images = self.score_grabber.grab_scores()
         predictions = self.model.predict(input_fn=lambda: tf.data.Dataset.from_tensors(tf.cast(images, tf.float16)))
-        score = 0
+        score = np.ndarray(shape=[1, 1], dtype=np.float16)
         for (i, prediction) in enumerate(predictions):
-            score += (10 ** (2 - i)) * prediction['class']
+            score[0, 0] += (10 ** (2 - i)) * prediction['class']
         return score
 
 

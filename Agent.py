@@ -1,9 +1,11 @@
 # In the name of God
-from Action import Action
+from Action import Action, ActionType
 from ScoreReader import ScoreReader
 from ScreenGrabber import ScreenGrabber
 from Memory import Experience, Memory
 from DecisionMaker import DecisionMaker
+import numpy as np
+import tensorflow as tf
 
 
 class Agent:
@@ -11,7 +13,8 @@ class Agent:
         self.score_reader = ScoreReader()
         self.screen_grabber = ScreenGrabber()
         self.continue_playing = False
-        self.decision_maker = DecisionMaker()
+        self.decision_maker = DecisionMaker(screen_width=self.screen_grabber.screen_position['width'],
+                                            screen_height=self.screen_grabber.screen_position['height'])
         self.maximum_length_of_experience = 10
         self.memory = Memory()
 
@@ -34,13 +37,24 @@ class Agent:
                     self.memory.record_experiences(experiences, counter)
                     self.continue_playing = False
 
+    def thinking(self):
+        number_of_samples = 1
+        screens = np.zeros(shape=[number_of_samples, 1072, 600, 1], dtype=np.float16)
+        speeds = np.zeros(shape=[number_of_samples, 1], dtype=np.float16)
+        rewards = np.zeros(shape=[number_of_samples, len(ActionType)], dtype=np.float16)
+        actions = np.zeros(shape=[number_of_samples], dtype=np.int32)
+        self.decision_maker.training(screens, speeds, actions, rewards)
+
 
 def main():
     agent = Agent()
     agent.playing(True)
+    # agent.thinking()
+
     reset_action = Action()
     reset_action.apply()
 
 
 if __name__ == "__main__":
+    tf.logging.set_verbosity(tf.logging.INFO)
     main()

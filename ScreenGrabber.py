@@ -20,7 +20,7 @@ class ScreenGrabber:
                                          'left': x_position,
                                          'width': digit_image_width,
                                          'height': digit_image_height})
-        self.screen_position = {'top': 50, 'left': 10, 'width': 1072, 'height': 600}
+        self.screen_position = {'top': 50, 'left': 10, 'width': 1024, 'height': 512}
         self.screen_shot = mss.mss()
         # Correcting BlueStacks frame
         auto_it = win32com.client.Dispatch("AutoItX3.Control")
@@ -62,7 +62,7 @@ class ScreenGrabber:
     def grab_screen(self):
         grabbed_screen = np.array(self.screen_shot.grab(self.screen_position))
         grabbed_screen = cv2.cvtColor(grabbed_screen, cv2.COLOR_BGRA2GRAY)
-        return grabbed_screen
+        return np.reshape(grabbed_screen, newshape=[1, grabbed_screen.shape[0], grabbed_screen.shape[1], 1])
 
 
 def main():
