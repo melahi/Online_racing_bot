@@ -2,7 +2,7 @@ import cv2
 import os
 import numpy as np
 
-from Action import Action
+from Action import Action, ActionType
 
 
 class Experience:
@@ -14,7 +14,7 @@ class Experience:
 
     def record(self, screen_file_name, speed_file, action_file):
         cv2.imwrite(screen_file_name, np.reshape(self.screen, newshape=[self.screen.shape[1], self.screen.shape[2]]))
-        speed_file.write(str(self.speed) + "\n")
+        speed_file.write(str(self.speed[0, 0]) + "\n")
         action_file.write(self.action.to_string() + "\n")
 
 
@@ -45,16 +45,18 @@ class Memory:
     def remember_experiences(self):
         experiences = []
         for directory in os.listdir(self.path):
+            if directory != "0":
+                print("Error: we don't handle more than one directory for remembering experiences")
+                exit(2)
             experiences_path = os.path.join(self.path, directory)
             speed_file = open(os.path.join(experiences_path, "speed_file.txt"), mode="r")
-            speeds = [int(line.strip()) for line in speed_file]
+            speeds = [float(line.strip()) for line in speed_file]
             action_file = open(os.path.join(experiences_path, "action_file.txt"), mode="r")
-            actions = [Action() for _ in range(len(speeds))]
-            for i, line in enumerate(action_file):
-                actions[i].from_string(line)
+            actions = [Action(action_type=ActionType(int(line.strip()))) for line in action_file]
             images = []
             for i in range(len(speeds)):
-                images.append(cv2.imread(os.path.join(experiences_path, "{}.png".format(i))))
+                images.append(cv2.imread(os.path.join(experiences_path, "{}.png".format(i)),
+                                         flags=cv2.IMREAD_GRAYSCALE))
 
             for i in range(len(speeds)):
                 experiences.append(Experience(screen=images[i], speed=speeds[i], action=actions[i]))

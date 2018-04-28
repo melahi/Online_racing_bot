@@ -17,6 +17,8 @@ class Agent:
                                             screen_height=self.screen_grabber.screen_position['height'])
         self.maximum_length_of_experience = 500
         self.memory = Memory()
+        self.look_ahead_step = 10
+        self.gamma = 0.9
 
     def playing(self, record_experience):
         if record_experience:
@@ -38,18 +40,41 @@ class Agent:
                     self.continue_playing = False
 
     def thinking(self):
-        number_of_samples = 1
-        screens = np.zeros(shape=[number_of_samples, 1072, 600, 1], dtype=np.float16)
-        speeds = np.zeros(shape=[number_of_samples, 1], dtype=np.float16)
-        rewards = np.zeros(shape=[number_of_samples, len(ActionType)], dtype=np.float16)
-        actions = np.zeros(shape=[number_of_samples], dtype=np.int32)
+        experiences = self.memory.remember_experiences()
+        raw_rewards = self.create_rewards(experiences=experiences)
+
+        # Removing experience which their corresponding rewards is not defined
+        samples_count = len(raw_rewards)
+        experiences = experiences[:samples_count]
+
+        screens = np.ndarray(shape=[samples_count, experiences[0].screen.shape[0], experiences[1].screen.shape[1], 1],
+                             dtype=np.float16)
+        speeds = np.ndarray(shape=[samples_count, 1], dtype=np.float16)
+        rewards = np.ndarray(shape=[samples_count, len(ActionType)], dtype=np.float16)
+        actions = np.ndarray(shape=[samples_count], dtype=np.int32)
+        for i in range(samples_count):
+            screens[i, :, :, 0] = experiences[i].screen
+            speeds[i, 0] = experiences[i].speed
+            actions[i] = experiences[i].action.action_type.value
+            rewards[i, actions[i]] = raw_rewards[i]
         self.decision_maker.training(screens, speeds, actions, rewards)
+
+    def create_rewards(self, experiences):
+        rewards = []
+        for i in range(len(experiences) - self.look_ahead_step):
+            reward = 0
+            gamma_coefficient = 1
+            for j in range(1, self.look_ahead_step):
+                reward += (gamma_coefficient * (experiences[i + j].speed - experiences[i + j - 1].speed))
+                gamma_coefficient *= self.gamma
+            rewards.append(reward)
+        return rewards
 
 
 def main():
     agent = Agent()
-    agent.playing(True)
-    # agent.thinking()
+    # agent.playing(True)
+    agent.thinking()
 
     reset_action = Action()
     reset_action.apply()

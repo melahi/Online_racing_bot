@@ -8,7 +8,7 @@ class DecisionMaker:
     def __init__(self, screen_width, screen_height):
         self.steps = 1
         self.conv_layers_kernel_size = [3, 3, 3]
-        self.conv_layers_filters = [64, 62, 64]
+        self.conv_layers_filters = [64, 64, 64]
         self.dense_units = [200, 200]
         output = "decision_maker"
         for i in range(len(self.conv_layers_filters)):
