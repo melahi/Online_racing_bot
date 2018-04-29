@@ -47,11 +47,11 @@ class Agent:
         samples_count = len(raw_rewards)
         experiences = experiences[:samples_count]
 
-        screens = np.ndarray(shape=[samples_count, experiences[0].screen.shape[0], experiences[1].screen.shape[1], 1],
+        screens = np.zeros(shape=[samples_count, experiences[0].screen.shape[0], experiences[1].screen.shape[1], 1],
                              dtype=np.float16)
-        speeds = np.ndarray(shape=[samples_count, 1], dtype=np.float16)
-        rewards = np.ndarray(shape=[samples_count, len(ActionType)], dtype=np.float16)
-        actions = np.ndarray(shape=[samples_count], dtype=np.int32)
+        speeds = np.zeros(shape=[samples_count, 1], dtype=np.float16)
+        rewards = np.zeros(shape=[samples_count, len(ActionType)], dtype=np.float16)
+        actions = np.zeros(shape=[samples_count], dtype=np.int32)
         for i in range(samples_count):
             screens[i, :, :, 0] = experiences[i].screen
             speeds[i, 0] = experiences[i].speed
@@ -64,7 +64,7 @@ class Agent:
         for i in range(len(experiences) - self.look_ahead_step):
             reward = 0
             gamma_coefficient = 1
-            for j in range(1, self.look_ahead_step):
+            for j in range(1, self.look_ahead_step + 1):
                 reward += (gamma_coefficient * (experiences[i + j].speed - experiences[i + j - 1].speed))
                 gamma_coefficient *= self.gamma
             rewards.append(reward)

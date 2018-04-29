@@ -6,7 +6,7 @@ import tensorflow as tf
 
 class DecisionMaker:
     def __init__(self, screen_width, screen_height):
-        self.steps = 1
+        self.steps = 1000
         self.conv_layers_kernel_size = [3, 3, 3]
         self.conv_layers_filters = [64, 64, 64]
         self.dense_units = [200, 200]
@@ -80,5 +80,5 @@ class DecisionMaker:
     @staticmethod
     def create_dataset(features, labels, repeat_count=None):
         dataset = tf.data.Dataset.from_tensor_slices((features, labels))
-        return dataset.shuffle(len(features) * 2).repeat(repeat_count).batch(min(100, len(features)))
+        return dataset.shuffle(len(features) * 2).repeat(repeat_count).batch(min(40, len(features)))
 
