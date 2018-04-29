@@ -67,7 +67,7 @@ class ScoreReader:
     def read_score(self):
         images = self.score_grabber.grab_scores()
         predictions = self.model.predict(input_fn=lambda: tf.data.Dataset.from_tensors(tf.cast(images, tf.float16)))
-        score = np.ndarray(shape=[1, 1], dtype=np.float16)
+        score = np.zeros(shape=[1, 1], dtype=np.float16)
         for (i, prediction) in enumerate(predictions):
             score[0, 0] += (10 ** (2 - i)) * prediction['class']
         return score

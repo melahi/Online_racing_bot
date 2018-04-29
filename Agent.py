@@ -73,8 +73,8 @@ class Agent:
 
 def main():
     agent = Agent()
-    # agent.playing(True)
-    agent.thinking()
+    agent.playing(True)
+    # agent.thinking()
 
     reset_action = Action()
     reset_action.apply()
