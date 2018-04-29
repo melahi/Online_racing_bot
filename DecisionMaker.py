@@ -80,5 +80,5 @@ class DecisionMaker:
     @staticmethod
     def create_dataset(features, labels, repeat_count=None):
         dataset = tf.data.Dataset.from_tensor_slices((features, labels))
-        return dataset.shuffle(len(features) * 2).repeat(repeat_count).batch(min(100, len(features)))
+        return dataset.shuffle(len(features) * 2).repeat(repeat_count).batch(min(40, len(features)))
 
