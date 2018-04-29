@@ -36,7 +36,7 @@ class ScreenGrabber:
 
     def grab_scores_generator(self):
         while True:
-            return self.grab_scores()
+            yield self.grab_scores()
 
     def get_score_and_display_it(self):
         while True:
