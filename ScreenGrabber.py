@@ -10,8 +10,6 @@ class ScreenGrabber:
     def __init__(self):
         digit_image_width = 20
         digit_image_height = 20
-        self.image_width = 10
-        self.image_height = 10
         y_position = 152
         x_positions = [875, 897, 919]
         self.digits_position = list()
@@ -41,7 +39,8 @@ class ScreenGrabber:
             return self.grab_scores()
 
     def get_score_and_display_it(self):
-        for grabbed_digits in self.grab_scores():
+        while True:
+            grabbed_digits = self.grab_scores()
             for (i, grabbed_digit) in enumerate(grabbed_digits):
                 cv2.imshow(str(i), grabbed_digit)
             if cv2.waitKey(25) & 0xFF == ord('q'):
