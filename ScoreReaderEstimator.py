@@ -6,34 +6,14 @@ from ScreenGrabber import ScreenGrabber
 import numpy as np
 
 
+
 class ScoreReader:
     def __init__(self):
-        self.steps = 1000
         self.dense_units = 200
-        self.output_dir = os.path.join("score_reader_{}_units".format(self.dense_units), "model.ckpt")
+        output = "score_reader_{}_units".format(self.dense_units)
+        self.model = tf.estimator.Estimator(model_fn=self.model_fn, model_dir=output)
+        self.steps = 1000
         self.score_grabber = ScreenGrabber()
-        self.session = tf.Session()
-        self.features = None
-        self.labels = None
-        self.dropout_activation = None
-        self.prediction = None
-        self.loss = None
-        self.train_op = None
-
-    def create_graph(self):
-        self.labels = tf.placeholder(dtype=tf.int32, shape=[None, 1])
-        self.features = tf.placeholder(dtype=tf.float16, shape=[None,
-                                                                self.score_grabber.digit_width,
-                                                                self.score_grabber.digit_height])
-        self.dropout_activation = tf.placeholder(dtype=tf.float16, shape=[])
-        net = tf.reshape(self.features, shape=[-1, self.score_grabber.digit_width * self.score_grabber.digit_height])
-        net = tf.layers.dense(inputs=net, units=self.dense_units, activation=tf.nn.relu)
-        net = tf.layers.dropout(inputs=net, rate=0.4, training=self.dropout_activation)
-        logits = tf.layers.dense(inputs=net, units=10)
-        self.prediction = tf.argmax(inputs=logits, axis=1)
-        self.loss = tf.losses.sparse_softmax_cross_entropy(labels=self.labels, logits=logits)
-        optimizer = tf.train.AdagradOptimizer(learning_rate=0.001)
-        self.train_op = optimizer.minimize(loss=self.loss, global_step=tf.train.get_global_step())
 
     def model_fn(self, features, labels, mode):
         net = tf.reshape(features, [-1, 10 * 10 * 1])

@@ -8,16 +8,18 @@ import os
 
 class ScreenGrabber:
     def __init__(self):
-        digit_image_width = 20
-        digit_image_height = 20
+        primitive_digit_width = 20
+        primitive_digit_height = 20
         y_position = 152
         x_positions = [875, 897, 919]
+        self.digit_width = 10
+        self.digit_height = 10
         self.digits_position = list()
         for x_position in x_positions:
             self.digits_position.append({'top': y_position,
                                          'left': x_position,
-                                         'width': digit_image_width,
-                                         'height': digit_image_height})
+                                         'width': primitive_digit_width,
+                                         'height': primitive_digit_height})
         self.screen_position = {'top': 210, 'left': 425, 'width': 256, 'height': 128}
         self.screen_shot = mss.mss()
         # Correcting BlueStacks frame
@@ -30,7 +32,7 @@ class ScreenGrabber:
         for (i, digit_position) in enumerate(self.digits_position):
             grabbed_digit = np.array(self.screen_shot.grab(digit_position))
             grabbed_digit = cv2.cvtColor(grabbed_digit, cv2.COLOR_BGRA2GRAY)
-            grabbed_digit = cv2.resize(grabbed_digit, (10, 10))
+            grabbed_digit = cv2.resize(grabbed_digit, (self.digit_width, self.digit_height))
             grabbed_digits[i] = grabbed_digit
         return np.array(grabbed_digits)
 
