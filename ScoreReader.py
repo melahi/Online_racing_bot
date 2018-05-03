@@ -1,4 +1,5 @@
 import tensorflow as tf
+from MyEstimator import MyEstimator
 from hashlib import sha1
 import os
 import cv2
@@ -6,99 +7,79 @@ from ScreenGrabber import ScreenGrabber
 import numpy as np
 
 
-class ScoreReader:
+class ScoreReader(MyEstimator):
     def __init__(self):
-        self.steps = 1000
         self.dense_units = 200
-        self.output_dir = os.path.join("score_reader_{}_units".format(self.dense_units), "model.ckpt")
-        self.score_grabber = ScreenGrabber()
-        self.session = tf.Session()
-        self.features = None
-        self.labels = None
-        self.dropout_activation = None
-        self.prediction = None
-        self.loss = None
-        self.train_op = None
+        model_dir = os.path.join("score_reader_{}_units".format(self.dense_units), "model.ckpt")
+        super().__init__(model_dir=model_dir)
+        self.steps = 1000
+        self.screen_grabber = ScreenGrabber()
 
-    def create_graph(self):
-        self.labels = tf.placeholder(dtype=tf.int32, shape=[None, 1])
-        self.features = tf.placeholder(dtype=tf.float16, shape=[None,
-                                                                self.score_grabber.digit_width,
-                                                                self.score_grabber.digit_height])
-        self.dropout_activation = tf.placeholder(dtype=tf.float16, shape=[])
-        net = tf.reshape(self.features, shape=[-1, self.score_grabber.digit_width * self.score_grabber.digit_height])
+    def define_model(self, training_phase):
+        features = tf.placeholder(dtype=tf.float16, shape=[None,
+                                                           self.screen_grabber.digit_width,
+                                                           self.screen_grabber.digit_height])
+        labels = tf.placeholder(dtype=tf.int32, shape=[None, 1])
+        net = tf.reshape(features, shape=[-1, self.screen_grabber.digit_width * self.screen_grabber.digit_height])
         net = tf.layers.dense(inputs=net, units=self.dense_units, activation=tf.nn.relu)
-        net = tf.layers.dropout(inputs=net, rate=0.4, training=self.dropout_activation)
+        net = tf.layers.dropout(inputs=net, rate=0.4, training=training_phase)
         logits = tf.layers.dense(inputs=net, units=10)
-        self.prediction = tf.argmax(inputs=logits, axis=1)
-        self.loss = tf.losses.sparse_softmax_cross_entropy(labels=self.labels, logits=logits)
-        optimizer = tf.train.AdagradOptimizer(learning_rate=0.001)
-        self.train_op = optimizer.minimize(loss=self.loss, global_step=tf.train.get_global_step())
-
-    def model_fn(self, features, labels, mode):
-        net = tf.reshape(features, [-1, 10 * 10 * 1])
-        net = tf.layers.dense(inputs=net, units=self.dense_units, activation=tf.nn.relu)
-        net = tf.layers.dropout(inputs=net, rate=0.4, training=(mode == tf.estimator.ModeKeys.TRAIN))
-        logits = tf.layers.dense(inputs=net, units=10)
-        predictions = {
-            "class": tf.argmax(input=logits, axis=1),
-            "probabilities": tf.nn.softmax(logits, name="softmax_tensor")
-        }
-
-        if mode == tf.estimator.ModeKeys.PREDICT:
-            return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
-
+        prediction = tf.argmax(input=logits, axis=1)
         loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits)
+        optimizer = tf.train.AdagradOptimizer(learning_rate=0.001)
+        train_op = optimizer.minimize(loss=loss, global_step=tf.train.get_global_step())
+        return features, labels, prediction, loss, train_op
 
-        if mode == tf.estimator.ModeKeys.TRAIN:
-            optimizer = tf.train.AdagradOptimizer(learning_rate=0.001)
-            train_op = optimizer.minimize(loss=loss, global_step=tf.train.get_global_step())
-            return tf.estimator.EstimatorSpec(mode=mode, loss=loss, train_op=train_op)
+    def training_phase(self, path):
+        def input_generator(input_path, batch_size):
+            features, labels = ScreenGrabber.reading_images(path=input_path)
+            number_of_samples = features.shape[0]
+            for _ in range(self.steps):
+                index_order = np.arange(number_of_samples)
+                np.random.shuffle(index_order)
+                current_index = 0
+                while current_index < number_of_samples:
+                    next_index = min(number_of_samples, current_index + batch_size)
+                    batched_feature = np.asarray([features[index_order[i]] for i in range(current_index,
+                                                                                          next_index)])
+                    batched_label = np.asarray([[labels[index_order[i]]] for i in range(current_index,
+                                                                                        next_index)])
+                    current_index = next_index
+                    yield batched_feature, batched_label
+        self.train(input_generator=input_generator(input_path=path, batch_size=50))
 
-        eval_metrics = {
-            'accuracy': tf.metrics.accuracy(labels=labels, predictions=predictions['class'])
-        }
-        return tf.estimator.EstimatorSpec(mode=mode, eval_metric_ops=eval_metrics, loss=loss)
+    def read_score(self):
+        predictions_gen = self.evaluation(input_generator=self.screen_grabber.grab_scores_generator())
+        for predictions in predictions_gen:
+            score = np.zeros(shape=[1, 1], dtype=np.float16)
+            for (i, prediction) in enumerate(predictions):
+                score[0, 0] += (10 ** (2 - i)) * prediction
+            yield score
 
-    @staticmethod
-    def create_dataset(features, labels, repeat_count=None):
-        dataset = tf.data.Dataset.from_tensor_slices((features, labels))
-        return dataset.shuffle(len(features) * 2).repeat(repeat_count).batch(min(10, len(features)))
-
-    def training(self, path):
-        features, labels = self.score_grabber.reading_images(path)
-        self.model.train(input_fn=lambda: self.create_dataset(features, labels), steps=self.steps)
-        evaluation = self.model.evaluate(input_fn=lambda: self.create_dataset(features, labels, 20))
-        print(evaluation)
-
-    def predict_and_save(self, generator, saving_path):
+    def predict_and_save(self, saving_path):
         output_directory = ["{}/{}/".format(saving_path, i) for i in range(0, 10)]
 
         # Creating directories for storing images in corresponding class.
         for directory in output_directory:
             os.makedirs(directory, exist_ok=True)
 
-        for images in generator:
-            predictions = self.model.predict(input_fn=lambda: tf.data.Dataset.from_tensors(tf.cast(images, tf.float16)))
-            for (i, prediction) in enumerate(predictions):
-                image_name = sha1(images[i].tostring()).hexdigest()
-                cv2.imwrite("{}{}.png".format(output_directory[prediction['class']], image_name), images[i])
-
-    def read_score(self):
-        images = self.score_grabber.grab_scores()
-        predictions = self.model.predict(input_fn=lambda: tf.data.Dataset.from_tensors(tf.cast(images, tf.float16)))
-        score = np.zeros(shape=[1, 1], dtype=np.float16)
-        for (i, prediction) in enumerate(predictions):
-            score[0, 0] += (10 ** (2 - i)) * prediction['class']
-        return score
+        for images in self.screen_grabber.grab_scores_generator():
+            images = [images]
+            predictions = self.evaluation(input_generator=images)
+            for (i, prediction) in enumerate(next(predictions)):
+                print(prediction)
+                image_name = sha1(images[0][i].tostring()).hexdigest()
+                print("{}{}.png".format(output_directory[prediction], image_name))
+                cv2.imwrite("{}{}.png".format(output_directory[prediction], image_name), images[0][i])
 
 
 def main():
     print("initializing")
     score_reader = ScoreReader()
-    # score_reader.training(path="./grabbed_score/")
-    score_grabber = ScreenGrabber()
-    score_reader.predict_and_save(score_grabber.grab_scores_generator(), "grabbed_score_new/")
+    # score_reader.predict_and_save(saving_path="my_test")
+    # score_reader.training_phase(path="./grabbed_score/")
+    for i in score_reader.read_score():
+        print(i)
 
 
 if __name__ == "__main__":
