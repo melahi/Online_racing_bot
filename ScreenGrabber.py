@@ -57,7 +57,7 @@ class ScreenGrabber:
             for dir_path, _, file_names in os.walk(os.path.join(path, class_directory)):
                 for file_name in file_names:
                     features.append(cv2.imread(os.path.join(dir_path, file_name), cv2.IMREAD_GRAYSCALE))
-                    labels.append(int(class_directory))
+                    labels.append([int(class_directory)])
         return np.asarray(features, dtype=np.float16), np.asarray(labels, dtype=np.int32)
 
     def grab_screen(self):

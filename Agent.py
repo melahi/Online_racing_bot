@@ -46,9 +46,8 @@ class Agent:
         # Removing experience which their corresponding rewards is not defined
         samples_count = len(raw_rewards)
         experiences = experiences[:samples_count]
-
         screens = np.zeros(shape=[samples_count, experiences[0].screen.shape[0], experiences[1].screen.shape[1], 1],
-                             dtype=np.float16)
+                           dtype=np.float16)
         speeds = np.zeros(shape=[samples_count, 1], dtype=np.float16)
         rewards = np.zeros(shape=[samples_count, len(ActionType)], dtype=np.float16)
         actions = np.zeros(shape=[samples_count], dtype=np.int32)

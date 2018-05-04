@@ -12,7 +12,6 @@ class ScoreReader(MyEstimator):
         self.dense_units = 200
         model_dir = os.path.join("score_reader_{}_units".format(self.dense_units), "model.ckpt")
         super().__init__(model_dir=model_dir)
-        self.steps = 1000
         self.screen_grabber = ScreenGrabber()
 
     def define_model(self, training_phase):
@@ -31,22 +30,8 @@ class ScoreReader(MyEstimator):
         return features, labels, prediction, loss, train_op
 
     def training_phase(self, path):
-        def input_generator(input_path, batch_size):
-            features, labels = ScreenGrabber.reading_images(path=input_path)
-            number_of_samples = features.shape[0]
-            for _ in range(self.steps):
-                index_order = np.arange(number_of_samples)
-                np.random.shuffle(index_order)
-                current_index = 0
-                while current_index < number_of_samples:
-                    next_index = min(number_of_samples, current_index + batch_size)
-                    batched_feature = np.asarray([features[index_order[i]] for i in range(current_index,
-                                                                                          next_index)])
-                    batched_label = np.asarray([[labels[index_order[i]]] for i in range(current_index,
-                                                                                        next_index)])
-                    current_index = next_index
-                    yield batched_feature, batched_label
-        self.train(input_generator=input_generator(input_path=path, batch_size=50))
+        features, labels = ScreenGrabber.reading_images(path=path)
+        self.train(input_generator=self.input_generator(features=features, labels=labels, batch_size=50))
 
     def read_score(self):
         predictions_gen = self.evaluation(input_generator=self.screen_grabber.grab_scores_generator())
@@ -77,9 +62,9 @@ def main():
     print("initializing")
     score_reader = ScoreReader()
     # score_reader.predict_and_save(saving_path="my_test")
-    # score_reader.training_phase(path="./grabbed_score/")
-    for i in score_reader.read_score():
-        print(i)
+    score_reader.training_phase(path="./grabbed_score/")
+    # for i in score_reader.read_score():
+    #     print(i)
 
 
 if __name__ == "__main__":
