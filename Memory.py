@@ -45,9 +45,7 @@ class Memory:
     def remember_experiences(self):
         experiences = []
         for directory in os.listdir(self.path):
-            if directory != "0":
-                print("Error: we don't handle more than one directory for remembering experiences")
-                exit(2)
+            experiences.append([])
             experiences_path = os.path.join(self.path, directory)
             speed_file = open(os.path.join(experiences_path, "speed_file.txt"), mode="r")
             speeds = [float(line.strip()) for line in speed_file]
@@ -59,8 +57,7 @@ class Memory:
                                          flags=cv2.IMREAD_GRAYSCALE))
 
             for i in range(len(speeds)):
-                experiences.append(Experience(screen=images[i], speed=speeds[i], action=actions[i]))
-
+                experiences[-1].append(Experience(screen=images[i], speed=speeds[i], action=actions[i]))
         return experiences
 
 

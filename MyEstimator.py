@@ -1,6 +1,7 @@
 # In the name of God
 import tensorflow as tf
 import numpy as np
+import os
 from tensorflow.python.framework.errors_impl import NotFoundError
 
 
@@ -26,12 +27,21 @@ class MyEstimator:
         train_op = None
         return feature, label, prediction, loss, train_op
 
-    def initialize_model(self, my_session):
+    def initialize_model(self, my_session, graph=None):
         try:
-            saver = tf.train.Saver()
-            saver.restore(my_session, self.model_dir)
+            if graph:
+                with graph.as_default():
+                    saver = tf.train.Saver()
+                    saver.restore(my_session, self.model_dir)
+            else:
+                saver = tf.train.Saver()
+                saver.restore(my_session, self.model_dir)
         except NotFoundError:
-            my_session.run(tf.global_variables_initializer())
+            if graph:
+                with graph.as_default():
+                    my_session.run(tf.global_variables_initializer())
+            else:
+                my_session.run(tf.global_variables_initializer())
 
     def save_model(self, my_session):
         saver = tf.train.Saver()
@@ -58,6 +68,7 @@ class MyEstimator:
                     loss_value, _ = my_session.run([loss, train_op], feed_dict=model_feed_dict)
                     if counter % 100 == 0:
                         print("Loss: {}".format(loss_value))
+                        self.save_model(my_session=my_session)
                 print("Final loss: {}".format(loss_value))
                 self.save_model(my_session=my_session)
 
@@ -80,7 +91,8 @@ class MyEstimator:
         with self.graph.as_default():
             self.feature, _, self.prediction, _, _ = self.define_model(training_phase=False)
         self.session = tf.Session(graph=self.graph)
-        self.initialize_model(self.session)
+        self.initialize_model(self.session, self.graph)
+        self.is_continues_evaluation_initialized = True
 
     def terminating_continues_evaluation(self):
         if self.session:
@@ -116,8 +128,8 @@ class MyEstimator:
 
     def input_generator(self, features, labels, batch_size):
         number_of_samples = self.find_number_of_samples(features)
-        steps = 1000
-        for _ in range(steps):
+        steps = 100
+        for i in range(steps):
             index_order = np.arange(number_of_samples)
             np.random.shuffle(index_order)
             current_index = 0
@@ -128,3 +140,4 @@ class MyEstimator:
                 batched_label = self.assign_next_batch(labels, batch_indices)
                 current_index = next_index
                 yield batched_feature, batched_label
+            print("Epoch {} is finished".format(i))

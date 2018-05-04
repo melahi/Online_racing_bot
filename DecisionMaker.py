@@ -3,6 +3,7 @@ from random import randrange
 from Action import Action, ActionType
 from MyEstimator import MyEstimator
 import tensorflow as tf
+import os
 
 
 class DecisionMaker(MyEstimator):
@@ -15,7 +16,9 @@ class DecisionMaker(MyEstimator):
             output_dir += "_conv_{}_{}".format(self.conv_layers_kernel_size[i], self.conv_layers_filters[i])
         for units in self.dense_units:
             output_dir += "_dense{}".format(units)
-        super().__init__(model_dir=output_dir)
+        os.makedirs(output_dir, exist_ok=True)
+        model_dir = os.path.join(output_dir, "model.ckpt")
+        super().__init__(model_dir=model_dir)
         self.down_sample_factor = 2 ** len(self.conv_layers_filters)
         assert (screen_width % self.down_sample_factor == 0), "screen_width should be divisible by {}.".\
             format(self.down_sample_factor)

@@ -27,9 +27,9 @@ class Agent:
             experiences = [Experience()]
         counter = 0
         self.continue_playing = True
-        while self.continue_playing:
+        for speed in self.score_reader.read_score():
             experiences[counter].screen = self.screen_grabber.grab_screen()
-            experiences[counter].speed = self.score_reader.read_score()
+            experiences[counter].speed = speed
             experiences[counter].action = self.decision_maker.making_decision(experiences[counter].screen,
                                                                               experiences[counter].speed)
             experiences[counter].action.apply()
@@ -37,25 +37,34 @@ class Agent:
                 counter += 1
                 if counter == self.maximum_length_of_experience:
                     self.memory.record_experiences(experiences, counter)
-                    self.continue_playing = False
+                    break
 
     def thinking(self):
-        experiences = self.memory.remember_experiences()
-        raw_rewards = self.create_rewards(experiences=experiences)
+        all_experiences = self.memory.remember_experiences()
+        all_raw_rewards = []
+        samples_count = 0
+        for i in range(len(all_experiences)):
+            all_raw_rewards.append(self.create_rewards(experiences=all_experiences[i]))
+            samples_count += len(all_raw_rewards[-1])
+            # Removing experience which their corresponding rewards is not defined
+            all_experiences[i] = all_experiences[i][:samples_count]
 
-        # Removing experience which their corresponding rewards is not defined
-        samples_count = len(raw_rewards)
-        experiences = experiences[:samples_count]
-        screens = np.zeros(shape=[samples_count, experiences[0].screen.shape[0], experiences[1].screen.shape[1], 1],
+        screens = np.zeros(shape=[samples_count,
+                                  all_experiences[0][0].screen.shape[0],
+                                  all_experiences[0][1].screen.shape[1],
+                                  1],
                            dtype=np.float16)
         speeds = np.zeros(shape=[samples_count, 1], dtype=np.float16)
         rewards = np.zeros(shape=[samples_count, len(ActionType)], dtype=np.float16)
         actions = np.zeros(shape=[samples_count], dtype=np.int32)
-        for i in range(samples_count):
-            screens[i, :, :, 0] = experiences[i].screen
-            speeds[i, 0] = experiences[i].speed
-            actions[i] = experiences[i].action.action_type.value
-            rewards[i, actions[i]] = raw_rewards[i]
+        counter = 0
+        for raw_rewards, experiences in zip(all_raw_rewards, all_experiences):
+            for raw_reward, experience in zip(raw_rewards, experiences):
+                screens[counter, :, :, 0] = experience.screen
+                speeds[counter, 0] = experience.speed
+                actions[counter] = experience.action.action_type.value
+                rewards[counter, actions[counter]] = raw_reward
+                counter += 1
         self.decision_maker.training(screens, speeds, actions, rewards)
 
     def create_rewards(self, experiences):
