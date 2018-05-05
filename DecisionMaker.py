@@ -10,7 +10,7 @@ class DecisionMaker(MyEstimator):
     def __init__(self, screen_width, screen_height):
         self.conv_layers_kernel_size = [3, 3, 3]
         self.conv_layers_filters = [32, 32, 64]
-        self.dense_units = [200, 200]
+        self.dense_units = [1000, 500, 200]
         output_dir = "decision_maker"
         for i in range(len(self.conv_layers_filters)):
             output_dir += "_conv_{}_{}".format(self.conv_layers_kernel_size[i], self.conv_layers_filters[i])

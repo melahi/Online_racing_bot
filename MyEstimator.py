@@ -128,7 +128,7 @@ class MyEstimator:
 
     def input_generator(self, features, labels, batch_size):
         number_of_samples = self.find_number_of_samples(features)
-        steps = 100
+        steps = 10000
         for i in range(steps):
             index_order = np.arange(number_of_samples)
             np.random.shuffle(index_order)

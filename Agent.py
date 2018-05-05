@@ -1,4 +1,7 @@
 # In the name of God
+import random
+import plotly
+
 from Action import Action, ActionType
 from ScoreReader import ScoreReader
 from ScreenGrabber import ScreenGrabber
@@ -15,7 +18,7 @@ class Agent:
         self.continue_playing = False
         self.decision_maker = DecisionMaker(screen_width=self.screen_grabber.screen_position['width'],
                                             screen_height=self.screen_grabber.screen_position['height'])
-        self.maximum_length_of_experience = 500
+        self.maximum_length_of_experience = 1000
         self.memory = Memory()
         self.look_ahead_step = 10
         self.gamma = 0.9
@@ -39,8 +42,8 @@ class Agent:
                     self.memory.record_experiences(experiences, counter)
                     break
 
-    def thinking(self):
-        all_experiences = self.memory.remember_experiences()
+    def thinking(self, threshold=None, sample_ignoring_probability=1.0):
+        all_experiences, directories = self.memory.remember_experiences()
         all_raw_rewards = []
         samples_count = 0
         for i in range(len(all_experiences)):
@@ -58,14 +61,24 @@ class Agent:
         rewards = np.zeros(shape=[samples_count, len(ActionType)], dtype=np.float16)
         actions = np.zeros(shape=[samples_count], dtype=np.int32)
         counter = 0
-        for raw_rewards, experiences in zip(all_raw_rewards, all_experiences):
+        for raw_rewards, experiences, directory in zip(all_raw_rewards, all_experiences, directories):
+            trace = plotly.graph_objs.Scatter(y=raw_rewards)
+            data = [trace]
+            plotly.offline.plot(data, filename="{}-rewards.html".format(directory))
             for raw_reward, experience in zip(raw_rewards, experiences):
+                if threshold and raw_reward < threshold:
+                    if random.random() < sample_ignoring_probability:
+                        continue
                 screens[counter, :, :, 0] = experience.screen
                 speeds[counter, 0] = experience.speed
                 actions[counter] = experience.action.action_type.value
                 rewards[counter, actions[counter]] = raw_reward
                 counter += 1
-        self.decision_maker.training(screens, speeds, actions, rewards)
+        print("{} and {}".format(samples_count, counter))
+        self.decision_maker.training(screens[:counter, :, :, :],
+                                     speeds[:counter, :],
+                                     actions[:counter],
+                                     rewards[:counter, :])
 
     def create_rewards(self, experiences):
         rewards = []
@@ -82,7 +95,7 @@ class Agent:
 def main():
     agent = Agent()
     # agent.playing(True)
-    agent.thinking()
+    agent.thinking(threshold=5, sample_ignoring_probability=1.0)
 
     reset_action = Action()
     reset_action.apply()

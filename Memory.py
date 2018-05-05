@@ -3,6 +3,7 @@ import os
 import numpy as np
 
 from Action import Action, ActionType
+import time
 
 
 class Experience:
@@ -24,12 +25,7 @@ class Memory:
 
     def find_new_slot_for_experiences(self):
         os.makedirs(self.path, exist_ok=True)
-        counter = 0
-        new_slot = self.path
-        while os.path.exists(new_slot):
-            new_slot = os.path.join(self.path, str(counter))
-            counter += 1
-        return new_slot
+        return os.path.join(self.path, str(int(time.time())))
 
     def record_experiences(self, experiences, length):
         recording_path = self.find_new_slot_for_experiences()
@@ -44,9 +40,13 @@ class Memory:
 
     def remember_experiences(self):
         experiences = []
+        directories = []
         for directory in os.listdir(self.path):
-            experiences.append([])
             experiences_path = os.path.join(self.path, directory)
+            if not os.path.isdir(experiences_path):
+                continue
+            experiences.append([])
+            directories.append(experiences_path)
             speed_file = open(os.path.join(experiences_path, "speed_file.txt"), mode="r")
             speeds = [float(line.strip()) for line in speed_file]
             action_file = open(os.path.join(experiences_path, "action_file.txt"), mode="r")
@@ -58,7 +58,7 @@ class Memory:
 
             for i in range(len(speeds)):
                 experiences[-1].append(Experience(screen=images[i], speed=speeds[i], action=actions[i]))
-        return experiences
+        return experiences, directories
 
 
 
