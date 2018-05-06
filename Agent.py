@@ -38,7 +38,8 @@ class Agent:
             experiences[counter].screen = self.screen_grabber.grab_screen()
             experiences[counter].speed = speed
             experiences[counter].action = self.decision_maker.making_decision(experiences[counter].screen,
-                                                                              experiences[counter].speed)
+                                                                              experiences[counter].speed,
+                                                                              self.lowest_reasonable_reward(speed))
             experiences[counter].action.apply()
             if record_experience:
                 counter += 1
@@ -118,6 +119,11 @@ class Agent:
                 gamma_coefficient *= self.gamma
             rewards.append(reward)
         return rewards
+
+    def lowest_reasonable_reward(self, speed):
+        lowest_reasonable_speed = speed - 10
+        return self.speed_reward(lowest_reasonable_speed) * ((1 - self.gamma ** self.look_ahead_step) /
+                                                             (1 - self.gamma))
 
 
 def main():
