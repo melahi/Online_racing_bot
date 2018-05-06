@@ -60,16 +60,17 @@ class MyEstimator:
             feature, label, _, loss, train_op = self.define_model(training_phase=True)
             with tf.Session() as my_session:
                 self.initialize_model(my_session)
-                loss_value = None
+                loss_value = []
                 for counter, (feature_input, label_input) in enumerate(input_generator):
                     model_feed_dict = dict()
                     self.find_key_and_value(model_feed_dict, feature, feature_input)
                     self.find_key_and_value(model_feed_dict, label, label_input)
-                    loss_value, _ = my_session.run([loss, train_op], feed_dict=model_feed_dict)
+                    loss_value.append(None)
+                    loss_value[-1], _ = my_session.run([loss, train_op], feed_dict=model_feed_dict)
                     if counter % 100 == 0:
-                        print("Loss: {}".format(loss_value))
+                        print("Loss: {}".format(np.mean(loss_value)))
                         self.save_model(my_session=my_session)
-                print("Final loss: {}".format(loss_value))
+                print("Final loss: {}".format(np.mean(loss_value)))
                 self.save_model(my_session=my_session)
 
     def evaluation(self, input_generator):
