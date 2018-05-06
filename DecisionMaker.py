@@ -63,7 +63,7 @@ class DecisionMaker(MyEstimator):
                                              predictions=q_value,
                                              weights=tf.one_hot(indices=labels['action'], depth=len(ActionType)))
 
-        optimizer = tf.train.AdagradOptimizer(learning_rate=0.001)
+        optimizer = tf.train.AdagradOptimizer(learning_rate=0.1)
         train_op = optimizer.minimize(loss=loss, global_step=tf.train.get_global_step())
         return features, labels, prediction, loss, train_op
 

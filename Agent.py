@@ -144,9 +144,9 @@ class Agent:
 
 def main():
     agent = Agent()
-    # agent.playing(recored_experience=True, simulation_mode=False)
-    # agent.thinking()
-    agent.simulation()
+    # agent.playing(record_experience=True, simulation_mode=False)
+    agent.thinking()
+    # agent.simulation()
 
     reset_action = Action()
     reset_action.apply()
