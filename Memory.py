@@ -49,6 +49,11 @@ class Memory:
             directories.append(experiences_path)
             speed_file = open(os.path.join(experiences_path, "speed_file.txt"), mode="r")
             speeds = [float(line.strip()) for line in speed_file]
+            if speeds[0] < 20:
+                speeds[0] = 32
+            for i in range(1, len(speeds)):
+                if speeds[i] < 20:
+                    speeds[i] = speeds[i - 1]
             action_file = open(os.path.join(experiences_path, "action_file.txt"), mode="r")
             actions = [Action(action_type=ActionType(int(line.strip()))) for line in action_file]
             images = []

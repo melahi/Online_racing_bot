@@ -1,3 +1,4 @@
+import random
 from random import randrange
 
 from Action import Action, ActionType
@@ -8,9 +9,10 @@ import os
 
 class DecisionMaker(MyEstimator):
     def __init__(self, screen_width, screen_height):
-        self.conv_layers_kernel_size = [3, 3, 3]
-        self.conv_layers_filters = [32, 32, 64]
-        self.dense_units = [1000, 500, 200]
+        # self.conv_layers_kernel_size = [3, 3, 3, 3]
+        self.conv_layers_kernel_size = [5, 5, 3, 3]
+        self.conv_layers_filters = [32, 32, 32, 32]
+        self.dense_units = [1000, 1000, 500]
         output_dir = "decision_maker"
         for i in range(len(self.conv_layers_filters)):
             output_dir += "_conv_{}_{}".format(self.conv_layers_kernel_size[i], self.conv_layers_filters[i])
@@ -53,10 +55,13 @@ class DecisionMaker(MyEstimator):
         # output layer
         q_value = tf.layers.dense(inputs=net, units=len(ActionType))
 
-        prediction = tf.argmax(input=q_value, axis=1)
-        loss = tf.losses.mean_squared_error(labels=labels['q_value'],
-                                            predictions=q_value,
-                                            weights=tf.one_hot(indices=labels['action'], depth=len(ActionType)))
+        prediction = dict()
+        prediction['action'] = tf.argmax(input=q_value, axis=1)
+        prediction['value'] = tf.reduce_max(input_tensor=q_value, axis=1, keepdims=False)
+        # loss = tf.losses.mean_squared_error(labels=labels['q_value'],
+        loss = tf.losses.absolute_difference(labels=labels['q_value'],
+                                             predictions=q_value,
+                                             weights=tf.one_hot(indices=labels['action'], depth=len(ActionType)))
 
         optimizer = tf.train.AdagradOptimizer(learning_rate=0.001)
         train_op = optimizer.minimize(loss=loss, global_step=tf.train.get_global_step())
@@ -67,10 +72,14 @@ class DecisionMaker(MyEstimator):
         return Action(action_type=ActionType(randrange(len(ActionType))))
 
     def making_decision(self, screen, speed):
-        # return self.making_random_decision()
         features = {'screen': screen, 'speed': speed}
         prediction = self.continues_evaluation(feature_input=features)
-        return Action(action_type=ActionType(prediction))
+        selected_action = Action(action_type=ActionType(prediction['action']))
+        if prediction['value'][0] < max(40, speed) and random.random() < 0.99:
+            while selected_action.action_type == prediction['action']:
+                selected_action = self.making_random_decision()
+
+        return selected_action
 
     def training(self, screens, speeds, actions, rewards):
         features = {'screen': screens, 'speed': speeds}

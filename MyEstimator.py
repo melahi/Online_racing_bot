@@ -126,8 +126,20 @@ class MyEstimator:
             return batched_data
         return np.asarray([all_data[i] for i in sampled_index])
 
+    def is_nan(self, input_data):
+        if type(input_data) == dict:
+            for key in input_data:
+                if self.is_nan(input_data[key]):
+                    return True
+            return False
+        else:
+            return np.isnan(input_data).any()
+
     def input_generator(self, features, labels, batch_size):
         number_of_samples = self.find_number_of_samples(features)
+        assert not self.is_nan(features)
+        assert not self.is_nan(labels)
+
         steps = 10000
         for i in range(steps):
             index_order = np.arange(number_of_samples)
