@@ -27,25 +27,41 @@ class Agent:
         self.not_bad_speed = 80
         self.bad_speed = 45
 
-    def playing(self, record_experience):
+    def simulation(self):
+        all_experiences, _ = self.memory.remember_experiences()
+        self.memory.path = "./Simulations"
+        for experiences in all_experiences:
+            speeds = [np.reshape(np.asarray(experience.speed), newshape=[1, 1]) for experience in experiences]
+            screens = [np.reshape(experience.screen,
+                                  newshape=[1, experience.screen.shape[0], experience.screen.shape[1], 1])
+                       for experience in experiences]
+            self.playing(True, speeds, screens, True)
+
+    def playing(self, record_experience, score_reader=None, screen_grabber=None, simulation_mode=False):
+        if not score_reader:
+            score_reader = self.score_reader.read_score()
+        if not screen_grabber:
+            screen_grabber = self.screen_grabber.grab_screen_generator()
+
         if record_experience:
             experiences = [Experience() for _ in range(self.maximum_length_of_experience)]
         else:
             experiences = [Experience()]
         counter = 0
         self.continue_playing = True
-        for speed in self.score_reader.read_score():
-            experiences[counter].screen = self.screen_grabber.grab_screen()
+        for speed, screen in zip(score_reader, screen_grabber):
+            experiences[counter].screen = screen
             experiences[counter].speed = speed
-            experiences[counter].action = self.decision_maker.making_decision(experiences[counter].screen,
-                                                                              experiences[counter].speed,
-                                                                              self.lowest_reasonable_reward(speed))
-            experiences[counter].action.apply()
+            experiences[counter].action, experiences[counter].predicted_rewards = self.decision_maker.making_decision(
+                experiences[counter].screen, experiences[counter].speed, self.lowest_reasonable_reward(speed))
+            if not simulation_mode:
+                experiences[counter].action.apply()
             if record_experience:
                 counter += 1
                 if counter == self.maximum_length_of_experience:
-                    self.memory.record_experiences(experiences, counter)
                     break
+        if record_experience:
+            self.memory.record_experiences(experiences, counter)
 
     def is_successful(self, experiences):
         for experience in experiences:
@@ -121,15 +137,16 @@ class Agent:
         return rewards
 
     def lowest_reasonable_reward(self, speed):
-        lowest_reasonable_speed = speed - 10
+        lowest_reasonable_speed = speed[0, 0] - 10
         return self.speed_reward(lowest_reasonable_speed) * ((1 - self.gamma ** self.look_ahead_step) /
                                                              (1 - self.gamma))
 
 
 def main():
     agent = Agent()
-    # agent.playing(True)
-    agent.thinking()
+    # agent.playing(recored_experience=True, simulation_mode=False)
+    # agent.thinking()
+    agent.simulation()
 
     reset_action = Action()
     reset_action.apply()

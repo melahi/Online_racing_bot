@@ -7,16 +7,19 @@ import time
 
 
 class Experience:
-    def __init__(self, screen=None, speed=None, action=None):
+    def __init__(self, screen=None, speed=None, action=None, predicted_reward=None):
         # In Reinforcement Learning terminology, state includes screen and speed
         self.screen = screen
         self.speed = speed
         self.action = action
+        self.predicted_rewards = predicted_reward
 
-    def record(self, screen_file_name, speed_file, action_file):
+    def record(self, screen_file_name, speed_file, action_file, predicted_rewards_file):
         cv2.imwrite(screen_file_name, np.reshape(self.screen, newshape=[self.screen.shape[1], self.screen.shape[2]]))
         speed_file.write(str(self.speed[0, 0]) + "\n")
         action_file.write(self.action.to_string() + "\n")
+        predicted_rewards_file.write(','.join([str(self.predicted_rewards[0, i])
+                                               for i in range(self.predicted_rewards.shape[1])]) + '\n')
 
 
 class Memory:
@@ -32,11 +35,13 @@ class Memory:
         os.makedirs(recording_path, exist_ok=True)
         speed_file_path = os.path.join(recording_path, "speed_file.txt")
         action_file_path = os.path.join(recording_path, "action_file.txt")
+        predicted_reward_file_path = os.path.join(recording_path, "predicted_reward_file.csv")
         speed_file = open(speed_file_path, "w+")
         action_file = open(action_file_path, "w+")
+        predicted_reward_file = open(predicted_reward_file_path, "w+")
         for i in range(length):
             screen_file_path = os.path.join(recording_path, "{}.png".format(i))
-            experiences[i].record(screen_file_path, speed_file, action_file)
+            experiences[i].record(screen_file_path, speed_file, action_file, predicted_reward_file)
 
     def remember_experiences(self):
         experiences = []

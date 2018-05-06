@@ -69,12 +69,12 @@ class Action:
         self.action_type = ActionType(int(serialized_action_type))
 
     def apply(self):
-        print("=======================")
-        print("{UP %s}" % self.action_to_key[self.action_type.value][0])
-        print("{DOWN %s}" % self.action_to_key[self.action_type.value][1])
-        print("{RIGHT %s}" % self.action_to_key[self.action_type.value][2])
-        print("{LEFT %s}" % self.action_to_key[self.action_type.value][3])
-        print("{TURBO %s}" % self.action_to_key[self.action_type.value][4])
+        # print("=======================")
+        # print("{UP %s}" % self.action_to_key[self.action_type.value][0])
+        # print("{DOWN %s}" % self.action_to_key[self.action_type.value][1])
+        # print("{RIGHT %s}" % self.action_to_key[self.action_type.value][2])
+        # print("{LEFT %s}" % self.action_to_key[self.action_type.value][3])
+        # print("{TURBO %s}" % self.action_to_key[self.action_type.value][4])
 
         self.auto_it.Send("{UP %s}" % self.action_to_key[self.action_type.value][0])
         self.auto_it.Send("{DOWN %s}" % self.action_to_key[self.action_type.value][1])

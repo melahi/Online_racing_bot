@@ -57,7 +57,7 @@ class DecisionMaker(MyEstimator):
 
         prediction = dict()
         prediction['action'] = tf.argmax(input=q_value, axis=1)
-        prediction['value'] = tf.reduce_max(input_tensor=q_value, axis=1, keepdims=False)
+        prediction['value'] = q_value
         # loss = tf.losses.mean_squared_error(labels=labels['q_value'],
         loss = tf.losses.absolute_difference(labels=labels['q_value'],
                                              predictions=q_value,
@@ -75,11 +75,11 @@ class DecisionMaker(MyEstimator):
         features = {'screen': screen, 'speed': speed}
         prediction = self.continues_evaluation(feature_input=features)
         selected_action = Action(action_type=ActionType(prediction['action']))
-        if prediction['value'][selected_action.action_type] < lowest_reasonable_rewards and random.random() < 0.99:
+        if prediction['value'][0][selected_action.action_type.value] < lowest_reasonable_rewards:
             while selected_action.action_type == prediction['action']:
                 selected_action = self.making_random_decision()
 
-        return selected_action
+        return selected_action, prediction['value']
 
     def training(self, screens, speeds, actions, rewards):
         features = {'screen': screens, 'speed': speeds}

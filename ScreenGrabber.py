@@ -65,6 +65,10 @@ class ScreenGrabber:
         grabbed_screen = cv2.cvtColor(grabbed_screen, cv2.COLOR_BGRA2GRAY)
         return np.reshape(grabbed_screen, newshape=[1, grabbed_screen.shape[0], grabbed_screen.shape[1], 1])
 
+    def grab_screen_generator(self):
+        while True:
+            yield self.grab_screen()
+
 
 def main():
     score_grabber = ScreenGrabber()
