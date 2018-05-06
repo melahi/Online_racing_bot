@@ -58,7 +58,7 @@ class Agent:
                 return True
         return False
 
-    def thinking(self, keep_normal_experience_probability=0.1):
+    def thinking(self, keep_normal_experience_probability=1.0):
         all_experiences, directories = self.memory.remember_experiences()
         all_raw_rewards = []
         samples_count = 0
@@ -78,9 +78,9 @@ class Agent:
         actions = np.zeros(shape=[samples_count], dtype=np.int32)
         counter = 0
         for raw_rewards, experiences, directory in zip(all_raw_rewards, all_experiences, directories):
-            # trace = plotly.graph_objs.Scatter(y=raw_rewards)
-            # data = [trace]
-            # plotly.offline.plot(data, filename="{}-rewards.html".format(directory))
+            trace = plotly.graph_objs.Scatter(y=raw_rewards)
+            data = [trace]
+            plotly.offline.plot(data, filename="{}-rewards.html".format(directory), show_link=False)
             for i, (raw_reward, experience) in enumerate(zip(raw_rewards, experiences)):
                 look_ahead_experiences = experiences[i:i + self.look_ahead_step]
                 if (not self.is_successful(look_ahead_experiences) and
