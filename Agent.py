@@ -112,7 +112,7 @@ class Agent:
             # reward = experiences[i].speed
             reward = 0
             gamma_coefficient = 1.0
-            for j in range(0, self.look_ahead_step + 1):
+            for j in range(1, self.look_ahead_step + 1):
                 # reward += (gamma_coefficient * (experiences[i + j].speed - experiences[i + j - 1].speed))
                 reward += (gamma_coefficient * self.speed_reward(experiences[i + j].speed))
                 gamma_coefficient *= self.gamma
