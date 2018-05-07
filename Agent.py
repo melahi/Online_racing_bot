@@ -95,9 +95,9 @@ class Agent:
         actions = np.zeros(shape=[samples_count], dtype=np.int32)
         counter = 0
         for raw_rewards, experiences, directory in zip(all_raw_rewards, all_experiences, directories):
-            trace = plotly.graph_objs.Scatter(y=raw_rewards)
-            data = [trace]
-            plotly.offline.plot(data, filename="{}-rewards.html".format(directory), show_link=False)
+            # trace = plotly.graph_objs.Scatter(y=raw_rewards)
+            # data = [trace]
+            # plotly.offline.plot(data, filename="{}-rewards.html".format(directory), show_link=False)
             for i, (raw_reward, experience) in enumerate(zip(raw_rewards, experiences)):
                 look_ahead_experiences = experiences[i:i + self.look_ahead_step]
                 if (not self.is_successful(look_ahead_experiences) and

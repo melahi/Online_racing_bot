@@ -47,6 +47,7 @@ class Memory:
         experiences = []
         directories = []
         for directory in os.listdir(self.path):
+            print("processing {}".format(directory))
             experiences_path = os.path.join(self.path, directory)
             if not os.path.isdir(experiences_path):
                 continue

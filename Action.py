@@ -1,5 +1,6 @@
 import win32com.client
 from enum import Enum
+import keyboard
 
 
 class ActionType(Enum):
@@ -24,6 +25,55 @@ class Action:
         self.pressing = {True: "down", False: "up"}
         self.action_type = action_type
         self.prepare_action_type_to_key_status_dict()
+
+    @staticmethod
+    def get_current_action_type():
+        pressed = [False] * 5
+        if keyboard.is_pressed('up'):
+            print("UP")
+            pressed[0] = True
+        if keyboard.is_pressed('right'):
+            print("right")
+            pressed[1] = True
+        if keyboard.is_pressed('left'):
+            print("left")
+            pressed[2] = True
+        if keyboard.is_pressed('down'):
+            print("down")
+            pressed[3] = True
+        if keyboard.is_pressed('shift'):
+            print("shift")
+            pressed[4] = True
+
+        if pressed[0]:
+            if pressed[4]:
+                if pressed[1]:
+                    return ActionType.UP_RIGHT_TURBO
+                elif pressed[2]:
+                    return ActionType.UP_LEFT_TURBO
+                else:
+                    return ActionType.UP_TURBO
+            else:
+                if pressed[1]:
+                    return ActionType.UP_RIGHT
+                elif pressed[2]:
+                    return ActionType.UP_LEFT
+                else:
+                    return ActionType.UP
+        elif pressed[3]:
+            if pressed[1]:
+                return ActionType.DOWN_RIGHT
+            elif pressed[2]:
+                return ActionType.DOWN_LEFT
+            else:
+                return ActionType.DOWN
+        else:
+            if pressed[1]:
+                return ActionType.RIGHT
+            elif pressed[2]:
+                return ActionType.LEFT
+            else:
+                return ActionType.NOTHING
 
     def prepare_action_type_to_key_status_dict(self):
         for action_type in ActionType:

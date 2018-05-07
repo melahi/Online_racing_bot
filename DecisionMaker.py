@@ -75,7 +75,7 @@ class DecisionMaker(MyEstimator):
         features = {'screen': screen, 'speed': speed}
         prediction = self.continues_evaluation(feature_input=features)
         selected_action = Action(action_type=ActionType(prediction['action']))
-        if prediction['value'][0][selected_action.action_type.value] < lowest_reasonable_rewards:
+        if prediction['value'][0][selected_action.action_type.value] < lowest_reasonable_rewards and False:
             while selected_action.action_type == prediction['action']:
                 selected_action = self.making_random_decision()
 
