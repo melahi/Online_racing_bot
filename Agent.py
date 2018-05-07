@@ -24,8 +24,10 @@ class Agent:
         self.gamma = 0.9
 
         self.good_speed = 150
-        self.not_bad_speed = 80
+        self.not_bad_speed = 65
         self.bad_speed = 45
+
+        self.processed_experience = set()
 
     def simulation(self):
         all_experiences, _ = self.memory.remember_experiences()
@@ -52,6 +54,8 @@ class Agent:
         for speed, screen in zip(score_reader, screen_grabber):
             experiences[counter].screen = screen
             experiences[counter].speed = speed
+            if speed == 0:
+                print("Find zero speed")
             experiences[counter].action, experiences[counter].predicted_rewards = self.decision_maker.making_decision(
                 experiences[counter].screen, experiences[counter].speed, self.lowest_reasonable_reward(speed))
             if not simulation_mode:
@@ -63,57 +67,59 @@ class Agent:
         if record_experience:
             self.memory.record_experiences(experiences, counter)
 
-    def is_successful(self, experiences):
-        for experience in experiences:
-            if experience.speed < self.good_speed:
+    def is_successful(self, speeds):
+        for speed in speeds:
+            if speed < self.good_speed:
                 return False
         return True
 
-    def is_failure(self, experiences):
-        for i in range(1, len(experiences)):
-            if experiences[i - 1].speed >= self.not_bad_speed and experiences[i].speed <= self.bad_speed:
+    def is_failure(self, speeds):
+        for i in range(1, len(speeds)):
+            if speeds[i - 1] >= self.not_bad_speed and speeds[i] <= self.bad_speed:
                 return True
         return False
 
-    def thinking(self, keep_normal_experience_probability=1.0):
-        all_experiences, directories = self.memory.remember_experiences()
-        all_raw_rewards = []
-        samples_count = 0
-        for i in range(len(all_experiences)):
-            all_raw_rewards.append(self.create_rewards(experiences=all_experiences[i]))
-            samples_count += len(all_raw_rewards[-1])
-            # Removing experience which their corresponding rewards is not defined
-            all_experiences[i] = all_experiences[i][:samples_count]
+    def selecting_an_experience(self):
+        directories = self.memory.find_experiences()
+        for directory in directories:
+            if directory not in self.processed_experience:
+                self.processed_experience.add(directory)
+                return directory
+        return random.choice(directories)
 
-        screens = np.zeros(shape=[samples_count,
-                                  all_experiences[0][0].screen.shape[0],
-                                  all_experiences[0][1].screen.shape[1],
-                                  1],
-                           dtype=np.float16)
-        speeds = np.zeros(shape=[samples_count, 1], dtype=np.float16)
-        rewards = np.zeros(shape=[samples_count, len(ActionType)], dtype=np.float16)
-        actions = np.zeros(shape=[samples_count], dtype=np.int32)
-        counter = 0
-        for raw_rewards, experiences, directory in zip(all_raw_rewards, all_experiences, directories):
-            # trace = plotly.graph_objs.Scatter(y=raw_rewards)
-            # data = [trace]
-            # plotly.offline.plot(data, filename="{}-rewards.html".format(directory), show_link=False)
-            for i, (raw_reward, experience) in enumerate(zip(raw_rewards, experiences)):
-                look_ahead_experiences = experiences[i:i + self.look_ahead_step]
-                if (not self.is_successful(look_ahead_experiences) and
-                        not self.is_failure(look_ahead_experiences) and
+    def thinking(self, keep_normal_experience_probability=0.3):
+        while True:
+            experience_directory = self.selecting_an_experience()
+            print("processing {}".format(experience_directory))
+            speeds, actions, screens = self.memory.remember_experiences(experience_path=experience_directory)
+            raw_rewards = self.create_rewards(speeds)
+            np_screens = np.zeros(shape=[len(raw_rewards), screens[0].shape[0], screens[0].shape[1], 1],
+                                  dtype=np.float16)
+            np_speeds = np.zeros(shape=[len(raw_rewards), 1], dtype=np.float16)
+            np_rewards = np.zeros(shape=[len(raw_rewards), len(ActionType)], dtype=np.float16)
+            np_actions = np.zeros(shape=[len(raw_rewards)], dtype=np.int32)
+            counter = 0
+            trace = plotly.graph_objs.Scatter(y=raw_rewards)
+            data = [trace]
+            plotly.offline.plot(data, filename="{}-rewards.html".format(experience_directory), auto_open=False)
+            for i in range(len(raw_rewards)):
+                look_ahead_speeds = speeds[i:i + self.look_ahead_step]
+                if (not self.is_successful(look_ahead_speeds) and
+                        not self.is_failure(look_ahead_speeds) and
                         random.random() > keep_normal_experience_probability):
+                    # This sample is neither a successful sample nor a failure sample, also chance doesn't select it
                     continue
-                screens[counter, :, :, 0] = experience.screen
-                speeds[counter, 0] = experience.speed
-                actions[counter] = experience.action.action_type.value
-                rewards[counter, actions[counter]] = raw_reward
+
+                np_screens[counter, :, :, 0] = screens[i]
+                np_speeds[counter, 0] = speeds[i]
+                np_actions[counter] = actions[i]
+                np_rewards[counter, actions[i]] = raw_rewards[i]
                 counter += 1
-        print("{} and {}".format(samples_count, counter))
-        self.decision_maker.training(screens[:counter, :, :, :],
-                                     speeds[:counter, :],
-                                     actions[:counter],
-                                     rewards[:counter, :])
+            print("selects {} samples from {} samples.".format(len(raw_rewards), counter))
+            self.decision_maker.training(np_screens[:counter, :, :, :],
+                                         np_speeds[:counter, :],
+                                         np_actions[:counter],
+                                         np_rewards[:counter, :])
 
     @staticmethod
     def speed_reward(speed):
@@ -123,15 +129,14 @@ class Agent:
             return (speed - 100) * 1 + 49
         return (speed - 150) * 5 + 99
 
-    def create_rewards(self, experiences):
+    def create_rewards(self, speeds):
         rewards = []
-        for i in range(len(experiences) - self.look_ahead_step):
+        for i in range(len(speeds) - self.look_ahead_step):
             # reward = experiences[i].speed
             reward = 0
             gamma_coefficient = 1.0
             for j in range(1, self.look_ahead_step + 1):
-                # reward += (gamma_coefficient * (experiences[i + j].speed - experiences[i + j - 1].speed))
-                reward += (gamma_coefficient * self.speed_reward(experiences[i + j].speed))
+                reward += (gamma_coefficient * self.speed_reward(speeds[i + j]))
                 gamma_coefficient *= self.gamma
             rewards.append(reward)
         return rewards

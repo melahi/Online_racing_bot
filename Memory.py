@@ -43,33 +43,30 @@ class Memory:
             screen_file_path = os.path.join(recording_path, "{}.png".format(i))
             experiences[i].record(screen_file_path, speed_file, action_file, predicted_reward_file)
 
-    def remember_experiences(self):
-        experiences = []
+    def find_experiences(self):
         directories = []
         for directory in os.listdir(self.path):
-            print("processing {}".format(directory))
             experiences_path = os.path.join(self.path, directory)
             if not os.path.isdir(experiences_path):
                 continue
-            experiences.append([])
             directories.append(experiences_path)
-            speed_file = open(os.path.join(experiences_path, "speed_file.txt"), mode="r")
-            speeds = [float(line.strip()) for line in speed_file]
-            if speeds[0] < 20:
-                speeds[0] = 32
-            for i in range(1, len(speeds)):
-                if speeds[i] < 20:
-                    speeds[i] = speeds[i - 1]
-            action_file = open(os.path.join(experiences_path, "action_file.txt"), mode="r")
-            actions = [Action(action_type=ActionType(int(line.strip()))) for line in action_file]
-            images = []
-            for i in range(len(speeds)):
-                images.append(cv2.imread(os.path.join(experiences_path, "{}.png".format(i)),
-                                         flags=cv2.IMREAD_GRAYSCALE))
+        return directories
 
-            for i in range(len(speeds)):
-                experiences[-1].append(Experience(screen=images[i], speed=speeds[i], action=actions[i]))
-        return experiences, directories
+    def remember_experiences(self, experience_path):
+        speed_file = open(os.path.join(experience_path, "speed_file.txt"), mode="r")
+        speeds = [float(line.strip()) for line in speed_file]
+
+        # We have a bug that sometime we consider speed as zero when in fact it is 100
+        for i in range(1, len(speeds)):
+            if speeds[i] < 20:
+                speeds[i] = speeds[i - 1]
+
+        action_file = open(os.path.join(experience_path, "action_file.txt"), mode="r")
+        actions = [int(line.strip()) for line in action_file]
+        screens = [None] * len(speeds)
+        for i in range(len(screens)):
+            screens[i] = cv2.imread(os.path.join(experience_path, "{}.png".format(i)), flags=cv2.IMREAD_GRAYSCALE)
+        return speeds, actions, screens
 
 
 

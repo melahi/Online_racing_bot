@@ -142,7 +142,7 @@ class MyEstimator:
         assert not self.is_nan(features)
         assert not self.is_nan(labels)
 
-        steps = 10000
+        steps = 5
         for i in range(steps):
             index_order = np.arange(number_of_samples)
             np.random.shuffle(index_order)
