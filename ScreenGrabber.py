@@ -20,7 +20,8 @@ class ScreenGrabber:
                                          'left': x_position,
                                          'width': primitive_digit_width,
                                          'height': primitive_digit_height})
-        self.screen_position = {'top': 210, 'left': 425, 'width': 256, 'height': 128}
+        self.screen_position = {'top': 215, 'left': 328, 'width': 448, 'height': 128}
+        # old2 configuration: self.screen_position = {'top': 210, 'left': 425, 'width': 256, 'height': 128}
         self.screen_shot = mss.mss()
         # Correcting BlueStacks frame
         auto_it = win32com.client.Dispatch("AutoItX3.Control")

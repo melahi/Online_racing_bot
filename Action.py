@@ -118,6 +118,9 @@ class Action:
     def from_string(self, serialized_action_type):
         self.action_type = ActionType(int(serialized_action_type))
 
+    def press_key(self, key):
+        self.auto_it.Send("{%s}" % key)
+
     def apply(self):
         # print("=======================")
         # print("{UP %s}" % self.action_to_key[self.action_type.value][0])

@@ -73,6 +73,7 @@ class MyEstimator:
                         self.save_model(my_session=my_session)
                 print("Final loss: {}".format(np.mean(loss_value)))
                 self.save_model(my_session=my_session)
+                return np.mean(loss_value)
 
     def evaluation(self, input_generator):
         graph = tf.Graph()
@@ -142,7 +143,7 @@ class MyEstimator:
         assert not self.is_nan(features)
         assert not self.is_nan(labels)
 
-        steps = 5
+        steps = 1
         for i in range(steps):
             index_order = np.arange(number_of_samples)
             np.random.shuffle(index_order)

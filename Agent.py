@@ -1,5 +1,8 @@
 # In the name of God
 import random
+import time
+import os
+
 import plotly
 
 from Action import Action, ActionType
@@ -18,16 +21,19 @@ class Agent:
         self.continue_playing = False
         self.decision_maker = DecisionMaker(screen_width=self.screen_grabber.screen_position['width'],
                                             screen_height=self.screen_grabber.screen_position['height'])
-        self.maximum_length_of_experience = 1000
+        self.maximum_length_of_experience = 50000
         self.memory = Memory()
-        self.look_ahead_step = 10
-        self.gamma = 0.9
+        self.look_ahead_step = 50
+        self.gamma = 0.975
 
         self.good_speed = 150
         self.not_bad_speed = 65
         self.bad_speed = 45
 
-        self.processed_experience = set()
+        self.processed_experience = list()
+        self.experience_loss = list()
+        self.loss_experience_file = os.path.join(".\\Memory_collection", "experience_loss.txt")
+        self.load_experience_loss()
 
     def simulation(self):
         all_experiences, _ = self.memory.remember_experiences()
@@ -39,7 +45,9 @@ class Agent:
                        for experience in experiences]
             self.playing(True, speeds, screens, True)
 
-    def playing(self, record_experience, score_reader=None, screen_grabber=None, simulation_mode=False):
+    def playing(self, record_experience, score_reader=None, screen_grabber=None, simulation_mode=False,
+                play_by_supervisor=False):
+        print("Start new game")
         if not score_reader:
             score_reader = self.score_reader.read_score()
         if not screen_grabber:
@@ -54,18 +62,39 @@ class Agent:
         for speed, screen in zip(score_reader, screen_grabber):
             experiences[counter].screen = screen
             experiences[counter].speed = speed
-            if speed == 0:
-                print("Find zero speed")
+            if speed[0, 0] == 0:
+                print("Zero speed is founded")
+                speed[0, 0] = 100
             experiences[counter].action, experiences[counter].predicted_rewards = self.decision_maker.making_decision(
                 experiences[counter].screen, experiences[counter].speed, self.lowest_reasonable_reward(speed))
             if not simulation_mode:
-                experiences[counter].action.apply()
+                if play_by_supervisor:
+                    experiences[counter].action = Action(action_type=Action.get_current_action_type())
+                else:
+                    experiences[counter].action.apply()
             if record_experience:
                 counter += 1
-                if counter == self.maximum_length_of_experience:
-                    break
-        if record_experience:
+            if not simulation_mode and self.is_game_over():
+                break
+        print("Game is over")
+        if record_experience and counter > 50:
             self.memory.record_experiences(experiences, counter)
+
+    def is_game_over(self):
+        scores = self.screen_grabber.grab_scores()
+        if np.max(scores[2, :, :]) < 50:
+            return True
+        return False
+
+    def continue_to_play(self):
+        my_action = Action()
+        my_action.press_key("n")
+        time.sleep(2)
+        my_action.press_key("c")
+        time.sleep(2)
+        while self.is_game_over():
+            my_action.press_key("s")
+        time.sleep(10)
 
     def is_successful(self, speeds):
         for speed in speeds:
@@ -78,19 +107,41 @@ class Agent:
             if speeds[i - 1] >= self.not_bad_speed and speeds[i] <= self.bad_speed:
                 return True
         return False
+    
+    def load_experience_loss(self):
+        self.processed_experience = list()
+        with open(self.loss_experience_file, "r") as loss_file:
+            for i, line in enumerate(loss_file):
+                elements = line.strip().split(sep=",")
+                self.processed_experience.append([elements[0], i])
+                self.experience_loss.append(float(elements[1]))
+    
+    def save_experience_loss(self):
+        with open(self.loss_experience_file, "w") as experience_loss_file:
+            for i in range(len(self.processed_experience)):
+                experience_loss_file.write("{},{}\n".format(self.processed_experience[i][0], self.experience_loss[i]))
+    
+    def is_it_new_experience(self, directory):
+        for processed_directory in self.processed_experience:
+            if directory == processed_directory[0]:
+                return False
+        return True
 
     def selecting_an_experience(self):
         directories = self.memory.find_experiences()
         for directory in directories:
-            if directory not in self.processed_experience:
-                self.processed_experience.add(directory)
-                return directory
-        return random.choice(directories)
+            if self.is_it_new_experience(directory):
+                new_index = len(self.processed_experience)
+                self.processed_experience.append([directory, new_index])
+                self.experience_loss.append(1000.0)
+        return random.choices(self.processed_experience, weights=self.experience_loss)[0]
 
-    def thinking(self, keep_normal_experience_probability=0.3):
-        while True:
-            experience_directory = self.selecting_an_experience()
-            print("processing {}".format(experience_directory))
+    def thinking(self, keep_normal_experience_probability=1.3):
+        for _ in range(10):
+            experience = self.selecting_an_experience()
+            experience_directory = experience[0]
+            experience_index = experience[1]
+            print("processing {}, with last loss: {}".format(experience_directory,self.experience_loss[experience_index]))
             speeds, actions, screens = self.memory.remember_experiences(experience_path=experience_directory)
             raw_rewards = self.create_rewards(speeds)
             np_screens = np.zeros(shape=[len(raw_rewards), screens[0].shape[0], screens[0].shape[1], 1],
@@ -115,23 +166,24 @@ class Agent:
                 np_actions[counter] = actions[i]
                 np_rewards[counter, actions[i]] = raw_rewards[i]
                 counter += 1
-            print("selects {} samples from {} samples.".format(len(raw_rewards), counter))
-            self.decision_maker.training(np_screens[:counter, :, :, :],
-                                         np_speeds[:counter, :],
-                                         np_actions[:counter],
-                                         np_rewards[:counter, :])
+            print("selects {} samples from {} samples.".format(counter, len(raw_rewards)))
+            self.experience_loss[experience_index] = self.decision_maker.training(np_screens[:counter, :, :, :],
+                                                                                  np_speeds[:counter, :],
+                                                                                  np_actions[:counter],
+                                                                                  np_rewards[:counter, :])
+            self.save_experience_loss()
 
     @staticmethod
     def speed_reward(speed):
         if speed <= 50:
-            return (speed - 50) * 5 - 1
+            return ((speed - 50) * 5 - 1) * 0.001
         if speed <= 150:
-            return (speed - 100) * 1 + 49
-        return (speed - 150) * 5 + 99
+            return ((speed - 100) * 1 + 49) * 0.001
+        return ((speed - 150) * 5 + 99) * 0.001
 
     def create_rewards(self, speeds):
         rewards = []
-        for i in range(len(speeds) - self.look_ahead_step):
+        for i in range(len(speeds) - self.look_ahead_step - 1):
             # reward = experiences[i].speed
             reward = 0
             gamma_coefficient = 1.0
@@ -142,16 +194,25 @@ class Agent:
         return rewards
 
     def lowest_reasonable_reward(self, speed):
-        lowest_reasonable_speed = speed[0, 0] - 10
+        lowest_reasonable_speed = speed[0, 0] - 20
+        if self.gamma == 1:
+            return self.speed_reward(lowest_reasonable_speed) * self.look_ahead_step
         return self.speed_reward(lowest_reasonable_speed) * ((1 - self.gamma ** self.look_ahead_step) /
                                                              (1 - self.gamma))
 
 
 def main():
     agent = Agent()
-    # agent.playing(record_experience=True, simulation_mode=False)
-    agent.thinking()
-    # agent.simulation()
+    play_by_supervisor = False
+    just_training = False
+    while True:
+        if not just_training:
+            agent.playing(record_experience=True, simulation_mode=False, play_by_supervisor=play_by_supervisor)
+        if not play_by_supervisor:
+            agent.thinking()
+        # agent.simulation()
+        if not just_training:
+            agent.continue_to_play()
 
     reset_action = Action()
     reset_action.apply()

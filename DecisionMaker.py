@@ -1,5 +1,6 @@
 import random
 from random import randrange
+import numpy as np
 
 from Action import Action, ActionType
 from MyEstimator import MyEstimator
@@ -56,6 +57,7 @@ class DecisionMaker(MyEstimator):
         q_value = tf.layers.dense(inputs=net, units=len(ActionType))
 
         prediction = dict()
+        # prediction['action'] = tf.multinomial(logits=q_value, num_samples=1)
         prediction['action'] = tf.argmax(input=q_value, axis=1)
         prediction['value'] = q_value
         # loss = tf.losses.mean_squared_error(labels=labels['q_value'],
@@ -63,7 +65,7 @@ class DecisionMaker(MyEstimator):
                                              predictions=q_value,
                                              weights=tf.one_hot(indices=labels['action'], depth=len(ActionType)))
 
-        optimizer = tf.train.AdagradOptimizer(learning_rate=0.1)
+        optimizer = tf.train.AdagradOptimizer(learning_rate=0.01)
         train_op = optimizer.minimize(loss=loss, global_step=tf.train.get_global_step())
         return features, labels, prediction, loss, train_op
 
@@ -72,16 +74,20 @@ class DecisionMaker(MyEstimator):
         return Action(action_type=ActionType(randrange(len(ActionType))))
 
     def making_decision(self, screen, speed, lowest_reasonable_rewards):
+        if random.random() < 0.1:
+            print("Choose random action")
+            return self.making_random_decision(), np.zeros(shape=[1, len(ActionType)], dtype=np.float16)
         features = {'screen': screen, 'speed': speed}
         prediction = self.continues_evaluation(feature_input=features)
         selected_action = Action(action_type=ActionType(prediction['action']))
-        if prediction['value'][0][selected_action.action_type.value] < lowest_reasonable_rewards and False:
-            while selected_action.action_type == prediction['action']:
-                selected_action = self.making_random_decision()
+        # if prediction['value'][0][selected_action.action_type.value] < lowest_reasonable_rewards:
+        #     print("{}: predicting accident".format(random.randint(0, 9)))
+        #     while selected_action.action_type.value == prediction['action']:
+        #         selected_action = self.making_random_decision()
 
         return selected_action, prediction['value']
 
     def training(self, screens, speeds, actions, rewards):
         features = {'screen': screens, 'speed': speeds}
         labels = {'q_value': rewards, 'action': actions}
-        self.train(input_generator=self.input_generator(features, labels, 10))
+        return self.train(input_generator=self.input_generator(features, labels, 10))
