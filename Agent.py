@@ -24,7 +24,7 @@ class Agent:
         self.maximum_length_of_experience = 50000
         self.memory = Memory()
         self.look_ahead_step = 50
-        self.gamma = 0.975
+        self.gamma = 0.90
 
         self.good_speed = 150
         self.not_bad_speed = 65
@@ -33,6 +33,7 @@ class Agent:
         self.processed_experience = list()
         self.experience_loss = list()
         self.loss_experience_file = os.path.join(".\\Memory_collection", "experience_loss.txt")
+        self.forgotten_directory = ".\\forgotten_experiences"
         self.load_experience_loss()
 
     def simulation(self):
@@ -47,6 +48,9 @@ class Agent:
 
     def playing(self, record_experience, score_reader=None, screen_grabber=None, simulation_mode=False,
                 play_by_supervisor=False):
+        if len(self.processed_experience) > 30:
+            self.forget_experience(self.processed_experience[9][0])
+        
         print("Start new game")
         if not score_reader:
             score_reader = self.score_reader.read_score()
@@ -85,10 +89,18 @@ class Agent:
         if np.max(scores[2, :, :]) < 50:
             return True
         return False
+    
+    def wait_to_finish_ads(self, is_just_training):
+        for i in range(1):
+            self.thinking()
+        if not is_just_training:
+            self.continue_to_play()
 
     def continue_to_play(self):
         my_action = Action()
         my_action.press_key("n")
+        time.sleep(2)
+        my_action.press_key("b")
         time.sleep(2)
         my_action.press_key("c")
         time.sleep(2)
@@ -121,23 +133,32 @@ class Agent:
             for i in range(len(self.processed_experience)):
                 experience_loss_file.write("{},{}\n".format(self.processed_experience[i][0], self.experience_loss[i]))
     
-    def is_it_new_experience(self, directory):
-        for processed_directory in self.processed_experience:
+    def find_experience_index(self, directory):
+        for index, processed_directory in enumerate(self.processed_experience):
             if directory == processed_directory[0]:
-                return False
-        return True
-
+                return index 
+        return None
+    
+    def forget_experience(self, experience_directory):
+        index = self.find_experience_index(experience_directory)
+        if index is None:
+            return
+        del self.processed_experience[index]
+        del self.experience_loss[index]
+        os.rename(experience_directory, os.path.join(self.forgotten_directory, experience_directory))
+        self.save_experience_loss()
+        
     def selecting_an_experience(self):
         directories = self.memory.find_experiences()
         for directory in directories:
-            if self.is_it_new_experience(directory):
+            if self.find_experience_index(directory) is None:
                 new_index = len(self.processed_experience)
                 self.processed_experience.append([directory, new_index])
                 self.experience_loss.append(1000.0)
         return random.choices(self.processed_experience, weights=self.experience_loss)[0]
 
     def thinking(self, keep_normal_experience_probability=1.3):
-        for _ in range(10):
+        for _ in range(50):
             experience = self.selecting_an_experience()
             experience_directory = experience[0]
             experience_index = experience[1]
@@ -205,6 +226,7 @@ def main():
     agent = Agent()
     play_by_supervisor = False
     just_training = False
+    agent.wait_to_finish_ads(just_training)
     while True:
         if not just_training:
             agent.playing(record_experience=True, simulation_mode=False, play_by_supervisor=play_by_supervisor)

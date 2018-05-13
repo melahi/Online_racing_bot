@@ -74,7 +74,7 @@ class DecisionMaker(MyEstimator):
         return Action(action_type=ActionType(randrange(len(ActionType))))
 
     def making_decision(self, screen, speed, lowest_reasonable_rewards):
-        if random.random() < 0.1:
+        if random.random() < -0.1:
             print("Choose random action")
             return self.making_random_decision(), np.zeros(shape=[1, len(ActionType)], dtype=np.float16)
         features = {'screen': screen, 'speed': speed}
