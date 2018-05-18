@@ -68,10 +68,9 @@ class MyEstimator:
                     loss_value.append(None)
                     loss_value[-1], _ = my_session.run([loss, train_op], feed_dict=model_feed_dict)
                     if counter % 100 == 0:
-                        print("Loss: {}".format(np.mean(loss_value)))
-                        loss_value = []
+                        print("Loss {}: {}".format(len(loss_value), np.mean(loss_value[max(0, counter - 100):])))
                         self.save_model(my_session=my_session)
-                print("Final loss: {}".format(np.mean(loss_value)))
+                print("Final loss {}: {}".format(len(loss_value), np.mean(loss_value)))
                 self.save_model(my_session=my_session)
                 return np.mean(loss_value)
 

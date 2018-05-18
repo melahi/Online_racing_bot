@@ -52,20 +52,19 @@ class DecisionMaker(MyEstimator):
         net = tf.concat([net, features['speed']], axis=1)
         for units in self.dense_units:
             net = tf.layers.dense(inputs=net, units=units, activation=tf.nn.relu)
+            net = tf.layers.dropout(inputs=net, rate=0.5, training=training_phase)
 
         # output layer
         q_value = tf.layers.dense(inputs=net, units=len(ActionType))
-
         prediction = dict()
         # prediction['action'] = tf.multinomial(logits=q_value, num_samples=1)
         prediction['action'] = tf.argmax(input=q_value, axis=1)
         prediction['value'] = q_value
-        # loss = tf.losses.mean_squared_error(labels=labels['q_value'],
-        loss = tf.losses.absolute_difference(labels=labels['q_value'],
+        loss = tf.losses.mean_squared_error(labels=labels['q_value'],
+        # loss = tf.losses.absolute_difference(labels=labels['q_value'],
                                              predictions=q_value,
-                                             weights=tf.one_hot(indices=labels['action'], depth=len(ActionType)))
-
-        optimizer = tf.train.AdagradOptimizer(learning_rate=0.01)
+                                             weights=tf.one_hot(indices=labels['action'], depth=len(ActionType), dtype=tf.float16))
+        optimizer = tf.train.AdamOptimizer(learning_rate=0.001, epsilon=1e-4)
         train_op = optimizer.minimize(loss=loss, global_step=tf.train.get_global_step())
         return features, labels, prediction, loss, train_op
 
@@ -88,6 +87,6 @@ class DecisionMaker(MyEstimator):
         return selected_action, prediction['value']
 
     def training(self, screens, speeds, actions, rewards):
-        features = {'screen': screens, 'speed': speeds}
+        features = {'screen': (screens - 128) / 256, 'speed': (speeds - 125) / 250}
         labels = {'q_value': rewards, 'action': actions}
         return self.train(input_generator=self.input_generator(features, labels, 10))

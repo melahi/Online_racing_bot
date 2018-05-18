@@ -23,8 +23,8 @@ class Agent:
                                             screen_height=self.screen_grabber.screen_position['height'])
         self.maximum_length_of_experience = 50000
         self.memory = Memory()
-        self.look_ahead_step = 50
-        self.gamma = 0.90
+        self.look_ahead_step = 25
+        self.gamma = 0.98
 
         self.good_speed = 150
         self.not_bad_speed = 65
@@ -37,24 +37,24 @@ class Agent:
         self.load_experience_loss()
 
     def simulation(self):
-        all_experiences, _ = self.memory.remember_experiences()
+        experience_path = "./Simulation_feeding"
+        speeds, _, screens = self.memory.remember_experiences(experience_path=experience_path)
         self.memory.path = "./Simulations"
-        for experiences in all_experiences:
-            speeds = [np.reshape(np.asarray(experience.speed), newshape=[1, 1]) for experience in experiences]
-            screens = [np.reshape(experience.screen,
-                                  newshape=[1, experience.screen.shape[0], experience.screen.shape[1], 1])
-                       for experience in experiences]
-            self.playing(True, speeds, screens, True)
+        self.playing(True,
+                     np.reshape(speeds, [-1, 1, 1]),
+                     np.reshape(screens, [-1, 1, self.decision_maker.screen_height, self.decision_maker.screen_width, 1]),
+                     True,
+                     False)
 
-    def playing(self, record_experience, score_reader=None, screen_grabber=None, simulation_mode=False,
-                play_by_supervisor=False):
-        if len(self.processed_experience) > 30:
+    def playing(self, record_experience, score_reader=None, screen_grabber=None, simulation_mode=False):
+        print(self.processed_experience)
+        if len(self.processed_experience) > 50:
             self.forget_experience(self.processed_experience[9][0])
         
         print("Start new game")
-        if not score_reader:
+        if score_reader is None:
             score_reader = self.score_reader.read_score()
-        if not screen_grabber:
+        if screen_grabber is None:
             screen_grabber = self.screen_grabber.grab_screen_generator()
 
         if record_experience:
@@ -72,10 +72,8 @@ class Agent:
             experiences[counter].action, experiences[counter].predicted_rewards = self.decision_maker.making_decision(
                 experiences[counter].screen, experiences[counter].speed, self.lowest_reasonable_reward(speed))
             if not simulation_mode:
-                if play_by_supervisor:
-                    experiences[counter].action = Action(action_type=Action.get_current_action_type())
-                else:
-                    experiences[counter].action.apply()
+                experiences[counter].action.update_current_action_type()
+                experiences[counter].action.apply()
             if record_experience:
                 counter += 1
             if not simulation_mode and self.is_game_over():
@@ -90,11 +88,9 @@ class Agent:
             return True
         return False
     
-    def wait_to_finish_ads(self, is_just_training):
+    def wait_to_finish_ads(self):
         for i in range(1):
             self.thinking()
-        if not is_just_training:
-            self.continue_to_play()
 
     def continue_to_play(self):
         my_action = Action()
@@ -157,8 +153,8 @@ class Agent:
                 self.experience_loss.append(1000.0)
         return random.choices(self.processed_experience, weights=self.experience_loss)[0]
 
-    def thinking(self, keep_normal_experience_probability=1.3):
-        for _ in range(50):
+    def thinking(self, keep_normal_experience_probability=0.5):
+        for _ in range(10):
             experience = self.selecting_an_experience()
             experience_directory = experience[0]
             experience_index = experience[1]
@@ -224,22 +220,24 @@ class Agent:
 
 def main():
     agent = Agent()
-    play_by_supervisor = False
-    just_training = False
-    agent.wait_to_finish_ads(just_training)
+    need_playing = False
+    need_training = True
+    # if need_playing:
+    #     agent.wait_to_finish_ads()
     while True:
-        if not just_training:
-            agent.playing(record_experience=True, simulation_mode=False, play_by_supervisor=play_by_supervisor)
-        if not play_by_supervisor:
-            agent.thinking()
-        # agent.simulation()
-        if not just_training:
+        if need_playing:
             agent.continue_to_play()
+            agent.playing(record_experience=True, simulation_mode=False)
+        if need_training:
+            agent.thinking()
 
-    reset_action = Action()
-    reset_action.apply()
+
+def simulation():
+    agent = Agent()
+    agent.simulation()
 
 
 if __name__ == "__main__":
     tf.logging.set_verbosity(tf.logging.INFO)
     main()
+    # simulation()

@@ -26,54 +26,58 @@ class Action:
         self.action_type = action_type
         self.prepare_action_type_to_key_status_dict()
 
-    @staticmethod
-    def get_current_action_type():
-        pressed = [False] * 5
-        if keyboard.is_pressed('up'):
-            print("UP")
+    def update_current_action_type(self):
+        pressed = [False] * 6
+        if keyboard.is_pressed('i'):
             pressed[0] = True
-        if keyboard.is_pressed('right'):
-            print("right")
+        if keyboard.is_pressed('l'):
             pressed[1] = True
-        if keyboard.is_pressed('left'):
-            print("left")
+        if keyboard.is_pressed('j'):
             pressed[2] = True
-        if keyboard.is_pressed('down'):
-            print("down")
+        if keyboard.is_pressed('k'):
             pressed[3] = True
-        if keyboard.is_pressed('shift'):
-            print("shift")
+        if keyboard.is_pressed('z'):
             pressed[4] = True
+        if keyboard.is_pressed('space'):
+            # This key is used for updating current action to "ActionType.NOTHING"
+            pressed[5] = True
+
+        for pressing_key in pressed:
+            if pressing_key:
+                break
+        else:
+            # No key is pressed, so we shouldn't update our action.
+            return
 
         if pressed[0]:
             if pressed[4]:
                 if pressed[1]:
-                    return ActionType.UP_RIGHT_TURBO
+                    self.action_type = ActionType.UP_RIGHT_TURBO
                 elif pressed[2]:
-                    return ActionType.UP_LEFT_TURBO
+                    self.action_type = ActionType.UP_LEFT_TURBO
                 else:
-                    return ActionType.UP_TURBO
+                    self.action_type = ActionType.UP_TURBO
             else:
                 if pressed[1]:
-                    return ActionType.UP_RIGHT
+                    self.action_type = ActionType.UP_RIGHT
                 elif pressed[2]:
-                    return ActionType.UP_LEFT
+                    self.action_type = ActionType.UP_LEFT
                 else:
-                    return ActionType.UP
+                    self.action_type = ActionType.UP
         elif pressed[3]:
             if pressed[1]:
-                return ActionType.DOWN_RIGHT
+                self.action_type = ActionType.DOWN_RIGHT
             elif pressed[2]:
-                return ActionType.DOWN_LEFT
+                self.action_type = ActionType.DOWN_LEFT
             else:
-                return ActionType.DOWN
+                self.action_type = ActionType.DOWN
         else:
             if pressed[1]:
-                return ActionType.RIGHT
+                self.action_type = ActionType.RIGHT
             elif pressed[2]:
-                return ActionType.LEFT
+                self.action_type = ActionType.LEFT
             else:
-                return ActionType.NOTHING
+                self.action_type = ActionType.NOTHING
 
     def prepare_action_type_to_key_status_dict(self):
         for action_type in ActionType:
@@ -127,10 +131,10 @@ class Action:
         # print("{DOWN %s}" % self.action_to_key[self.action_type.value][1])
         # print("{RIGHT %s}" % self.action_to_key[self.action_type.value][2])
         # print("{LEFT %s}" % self.action_to_key[self.action_type.value][3])
-        # print("{TURBO %s}" % self.action_to_key[self.action_type.value][4])
+        # print("{LSHIFT %s}" % self.action_to_key[self.action_type.value][4])
 
         self.auto_it.Send("{UP %s}" % self.action_to_key[self.action_type.value][0])
         self.auto_it.Send("{DOWN %s}" % self.action_to_key[self.action_type.value][1])
         self.auto_it.Send("{RIGHT %s}" % self.action_to_key[self.action_type.value][2])
         self.auto_it.Send("{LEFT %s}" % self.action_to_key[self.action_type.value][3])
-        self.auto_it.Send("{TURBO %s}" % self.action_to_key[self.action_type.value][4])
+        self.auto_it.Send("{LSHIFT %s}" % self.action_to_key[self.action_type.value][4])

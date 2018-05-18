@@ -52,7 +52,8 @@ class Memory:
             directories.append(experiences_path)
         return directories
 
-    def remember_experiences(self, experience_path):
+    @staticmethod
+    def remember_experiences(experience_path):
         speed_file = open(os.path.join(experience_path, "speed_file.txt"), mode="r")
         speeds = [float(line.strip()) for line in speed_file]
 
