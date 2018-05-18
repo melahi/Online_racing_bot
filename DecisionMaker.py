@@ -72,11 +72,19 @@ class DecisionMaker(MyEstimator):
     def making_random_decision():
         return Action(action_type=ActionType(randrange(len(ActionType))))
 
+    @staticmethod
+    def normalizing_screen(screen):
+        return (screen - 128) / 256
+
+    @staticmethod
+    def normalizing_speed(speed):
+        return (speed - 125) / 250
+
     def making_decision(self, screen, speed, lowest_reasonable_rewards):
         if random.random() < -0.1:
             print("Choose random action")
             return self.making_random_decision(), np.zeros(shape=[1, len(ActionType)], dtype=np.float16)
-        features = {'screen': screen, 'speed': speed}
+        features = {'screen': self.normalizing_screen(screen), 'speed': self.normalizing_speed(speed)}
         prediction = self.continues_evaluation(feature_input=features)
         selected_action = Action(action_type=ActionType(prediction['action']))
         # if prediction['value'][0][selected_action.action_type.value] < lowest_reasonable_rewards:
@@ -87,6 +95,6 @@ class DecisionMaker(MyEstimator):
         return selected_action, prediction['value']
 
     def training(self, screens, speeds, actions, rewards):
-        features = {'screen': (screens - 128) / 256, 'speed': (speeds - 125) / 250}
+        features = {'screen': self.normalizing_screen(screens), 'speed': self.normalizing_speed(speeds)}
         labels = {'q_value': rewards, 'action': actions}
         return self.train(input_generator=self.input_generator(features, labels, 10))

@@ -49,7 +49,7 @@ class Agent:
     def playing(self, record_experience, score_reader=None, screen_grabber=None, simulation_mode=False):
         print(self.processed_experience)
         if len(self.processed_experience) > 50:
-            self.forget_experience(self.processed_experience[9][0])
+            self.forget_experience(self.processed_experience[10][0])
         
         print("Start new game")
         if score_reader is None:
@@ -220,7 +220,7 @@ class Agent:
 
 def main():
     agent = Agent()
-    need_playing = False
+    need_playing = True
     need_training = True
     # if need_playing:
     #     agent.wait_to_finish_ads()
