@@ -23,8 +23,8 @@ class Agent:
                                             screen_height=self.screen_grabber.screen_position['height'])
         self.maximum_length_of_experience = 50000
         self.memory = Memory()
-        self.look_ahead_step = 25
-        self.gamma = 0.98
+        self.look_ahead_step = 10
+        self.gamma = 0.925
 
         self.good_speed = 150
         self.not_bad_speed = 65
@@ -48,8 +48,8 @@ class Agent:
 
     def playing(self, record_experience, score_reader=None, screen_grabber=None, simulation_mode=False):
         print(self.processed_experience)
-        if len(self.processed_experience) > 50:
-            self.forget_experience(self.processed_experience[10][0])
+        if len(self.processed_experience) > 100:
+            self.forget_experience(self.processed_experience[51][0])
         
         print("Start new game")
         if score_reader is None:
@@ -122,7 +122,12 @@ class Agent:
             for i, line in enumerate(loss_file):
                 elements = line.strip().split(sep=",")
                 self.processed_experience.append([elements[0], i])
-                self.experience_loss.append(float(elements[1]))
+                if elements[1] == "nan":
+                    elements[1] = "100000000000.0"
+                try:
+                    self.experience_loss.append(float(elements[1]))
+                except:
+                    self.experience_loss.append(100000000000.0)
     
     def save_experience_loss(self):
         with open(self.loss_experience_file, "w") as experience_loss_file:
@@ -150,11 +155,11 @@ class Agent:
             if self.find_experience_index(directory) is None:
                 new_index = len(self.processed_experience)
                 self.processed_experience.append([directory, new_index])
-                self.experience_loss.append(1000.0)
+                self.experience_loss.append(100000000000.0)
         return random.choices(self.processed_experience, weights=self.experience_loss)[0]
 
-    def thinking(self, keep_normal_experience_probability=0.5):
-        for _ in range(10):
+    def thinking(self, keep_normal_experience_probability=12.0):
+        for _ in range(30):
             experience = self.selecting_an_experience()
             experience_directory = experience[0]
             experience_index = experience[1]
@@ -188,15 +193,17 @@ class Agent:
                                                                                   np_speeds[:counter, :],
                                                                                   np_actions[:counter],
                                                                                   np_rewards[:counter, :])
+            self.experience_loss[experience_index] = (self.experience_loss[experience_index] / 50) ** 5
+            print("Loss score of experience: {}".format(self.experience_loss[experience_index]))
             self.save_experience_loss()
 
     @staticmethod
     def speed_reward(speed):
         if speed <= 50:
-            return ((speed - 50) * 5 - 1) * 0.001
+            return ((speed - 50) * 20 - 11) * 0.1
         if speed <= 150:
-            return ((speed - 100) * 1 + 49) * 0.001
-        return ((speed - 150) * 5 + 99) * 0.001
+            return ((speed - 100) * 1 + 39) * 0.1
+        return ((speed - 150) * 5 + 89) * 0.1
 
     def create_rewards(self, speeds):
         rewards = []
@@ -220,7 +227,7 @@ class Agent:
 
 def main():
     agent = Agent()
-    need_playing = True
+    need_playing = False
     need_training = True
     # if need_playing:
     #     agent.wait_to_finish_ads()
@@ -230,6 +237,10 @@ def main():
             agent.playing(record_experience=True, simulation_mode=False)
         if need_training:
             agent.thinking()
+        break
+        
+    resetting_action = Action()
+    resetting_action.apply()
 
 
 def simulation():

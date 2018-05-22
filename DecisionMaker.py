@@ -13,7 +13,7 @@ class DecisionMaker(MyEstimator):
         # self.conv_layers_kernel_size = [3, 3, 3, 3]
         self.conv_layers_kernel_size = [5, 5, 3, 3]
         self.conv_layers_filters = [32, 32, 32, 32]
-        self.dense_units = [1000, 1000, 500]
+        self.dense_units = [800, 800, 200]
         output_dir = "decision_maker"
         for i in range(len(self.conv_layers_filters)):
             output_dir += "_conv_{}_{}".format(self.conv_layers_kernel_size[i], self.conv_layers_filters[i])
@@ -33,11 +33,11 @@ class DecisionMaker(MyEstimator):
     def define_model(self, training_phase):
         features = dict()
         labels = dict()
-        features['screen'] = tf.placeholder(dtype=tf.float16, shape=[None, self.screen_height, self.screen_width, 1])
-        features['speed'] = tf.placeholder(dtype=tf.float16, shape=[None, 1])
-        labels['q_value'] = tf.placeholder(dtype=tf.float16, shape=[None, len(ActionType)])
+        features['screen'] = tf.placeholder(dtype=tf.float32, shape=[None, self.screen_height, self.screen_width, 1])
+        features['speed'] = tf.placeholder(dtype=tf.float32, shape=[None, 1])
+        labels['q_value'] = tf.placeholder(dtype=tf.float32, shape=[None, len(ActionType)])
         labels['action'] = tf.placeholder(dtype=tf.int32, shape=[None])
-        # net = tf.cast(features['screen'], dtype=tf.float16)
+        # net = tf.cast(features['screen'], dtype=tf.float32)
         net = features['screen']
         for i in range(len(self.conv_layers_kernel_size)):
             net = tf.layers.conv2d(inputs=net,
@@ -52,7 +52,8 @@ class DecisionMaker(MyEstimator):
         net = tf.concat([net, features['speed']], axis=1)
         for units in self.dense_units:
             net = tf.layers.dense(inputs=net, units=units, activation=tf.nn.relu)
-            net = tf.layers.dropout(inputs=net, rate=0.5, training=training_phase)
+            # net = tf.layers.dropout(inputs=net, rate=0.5, training=training_phase)
+            net = tf.layers.dropout(inputs=net, rate=0.5, training=False)
 
         # output layer
         q_value = tf.layers.dense(inputs=net, units=len(ActionType))
@@ -63,8 +64,8 @@ class DecisionMaker(MyEstimator):
         loss = tf.losses.mean_squared_error(labels=labels['q_value'],
         # loss = tf.losses.absolute_difference(labels=labels['q_value'],
                                              predictions=q_value,
-                                             weights=tf.one_hot(indices=labels['action'], depth=len(ActionType), dtype=tf.float16))
-        optimizer = tf.train.AdamOptimizer(learning_rate=0.001, epsilon=1e-4)
+                                             weights=tf.one_hot(indices=labels['action'], depth=len(ActionType), dtype=tf.float32))
+        optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
         train_op = optimizer.minimize(loss=loss, global_step=tf.train.get_global_step())
         return features, labels, prediction, loss, train_op
 
@@ -83,7 +84,7 @@ class DecisionMaker(MyEstimator):
     def making_decision(self, screen, speed, lowest_reasonable_rewards):
         if random.random() < -0.1:
             print("Choose random action")
-            return self.making_random_decision(), np.zeros(shape=[1, len(ActionType)], dtype=np.float16)
+            return self.making_random_decision(), np.zeros(shape=[1, len(ActionType)], dtype=np.float32)
         features = {'screen': self.normalizing_screen(screen), 'speed': self.normalizing_speed(speed)}
         prediction = self.continues_evaluation(feature_input=features)
         selected_action = Action(action_type=ActionType(prediction['action']))
