@@ -229,7 +229,6 @@ def main():
             resetting_action.apply()
         if need_training:
             agent.thinking()
-        break
 
 
 def simulation():
