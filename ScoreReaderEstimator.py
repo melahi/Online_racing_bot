@@ -59,15 +59,15 @@ class ScoreReader:
             os.makedirs(directory, exist_ok=True)
 
         for images in generator:
-            predictions = self.model.predict(input_fn=lambda: tf.data.Dataset.from_tensors(tf.cast(images, tf.float16)))
+            predictions = self.model.predict(input_fn=lambda: tf.data.Dataset.from_tensors(tf.cast(images, tf.float32)))
             for (i, prediction) in enumerate(predictions):
                 image_name = sha1(images[i].tostring()).hexdigest()
                 cv2.imwrite("{}{}.png".format(output_directory[prediction['class']], image_name), images[i])
 
     def read_score(self):
         images = self.score_grabber.grab_scores()
-        predictions = self.model.predict(input_fn=lambda: tf.data.Dataset.from_tensors(tf.cast(images, tf.float16)))
-        score = np.zeros(shape=[1, 1], dtype=np.float16)
+        predictions = self.model.predict(input_fn=lambda: tf.data.Dataset.from_tensors(tf.cast(images, tf.float32)))
+        score = np.zeros(shape=[1, 1], dtype=np.float32)
         for (i, prediction) in enumerate(predictions):
             score[0, 0] += (10 ** (2 - i)) * prediction['class']
         return score

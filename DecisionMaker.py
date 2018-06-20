@@ -10,10 +10,10 @@ import os
 
 class DecisionMaker(MyEstimator):
     def __init__(self, screen_width, screen_height):
-        # self.conv_layers_kernel_size = [3, 3, 3, 3]
-        self.conv_layers_kernel_size = [5, 5, 3, 3]
-        self.conv_layers_filters = [32, 32, 32, 32]
-        self.dense_units = [800, 800, 200]
+        self.conv_layers_kernel_size = [8, 4]
+        self.conv_layers_stride_size = [4, 2]
+        self.conv_layers_filters = [16, 32]
+        self.dense_units = [256]
         output_dir = "decision_maker"
         for i in range(len(self.conv_layers_filters)):
             output_dir += "_conv_{}_{}".format(self.conv_layers_kernel_size[i], self.conv_layers_filters[i])
@@ -22,11 +22,6 @@ class DecisionMaker(MyEstimator):
         os.makedirs(output_dir, exist_ok=True)
         model_dir = os.path.join(output_dir, "model.ckpt")
         super().__init__(model_dir=model_dir)
-        self.down_sample_factor = 2 ** len(self.conv_layers_filters)
-        assert (screen_width % self.down_sample_factor == 0), "screen_width should be divisible by {}.".\
-            format(self.down_sample_factor)
-        assert (screen_height % self.down_sample_factor == 0), "screen_height should be divisible by {}.".\
-            format(self.down_sample_factor)
         self.screen_width = screen_width
         self.screen_height = screen_height
 
@@ -42,13 +37,11 @@ class DecisionMaker(MyEstimator):
         for i in range(len(self.conv_layers_kernel_size)):
             net = tf.layers.conv2d(inputs=net,
                                    kernel_size=self.conv_layers_kernel_size[i],
+                                   strides=self.conv_layers_stride_size[i],
                                    filters=self.conv_layers_filters[i],
                                    padding='same',
                                    activation=tf.nn.relu)
-            net = tf.layers.max_pooling2d(inputs=net, pool_size=2, strides=2)
-        net = tf.reshape(net, shape=[-1, int(self.screen_width / self.down_sample_factor *
-                                             self.screen_height / self.down_sample_factor *
-                                             self.conv_layers_filters[-1])])
+        net = tf.layers.flatten(inputs=net)
         net = tf.concat([net, features['speed']], axis=1)
         for units in self.dense_units:
             net = tf.layers.dense(inputs=net, units=units, activation=tf.nn.relu)
@@ -62,7 +55,6 @@ class DecisionMaker(MyEstimator):
         prediction['action'] = tf.argmax(input=q_value, axis=1)
         prediction['value'] = q_value
         loss = tf.losses.mean_squared_error(labels=labels['q_value'],
-        # loss = tf.losses.absolute_difference(labels=labels['q_value'],
                                             predictions=q_value,
                                             weights=tf.one_hot(indices=labels['action'], depth=len(ActionType), dtype=tf.float32))
         optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
@@ -90,8 +82,7 @@ class DecisionMaker(MyEstimator):
         selected_action = Action(action_type=ActionType(prediction['action']))
         return selected_action, prediction['value']
 
-    def find_state_value(self, screen, speed, batch_size=10):
-        self.terminating_continues_evaluation()
+    def find_state_value(self, screen, speed, batch_size=64):
         state_value = np.zeros([0, len(ActionType)])
         for starting_index in range(0, screen.shape[0], batch_size):
             features = {'screen': self.normalizing_screen(screen[starting_index: min(starting_index + batch_size,
@@ -105,4 +96,4 @@ class DecisionMaker(MyEstimator):
     def training(self, screens, speeds, actions, rewards):
         features = {'screen': self.normalizing_screen(screens), 'speed': self.normalizing_speed(speeds)}
         labels = {'q_value': rewards, 'action': actions}
-        return self.train(input_generator=self.input_generator(features, labels, 10))
+        return self.train(input_generator=self.input_generator(features, labels, 64))

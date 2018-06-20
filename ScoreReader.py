@@ -15,7 +15,7 @@ class ScoreReader(MyEstimator):
         self.screen_grabber = ScreenGrabber()
 
     def define_model(self, training_phase):
-        features = tf.placeholder(dtype=tf.float16, shape=[None,
+        features = tf.placeholder(dtype=tf.float32, shape=[None,
                                                            self.screen_grabber.digit_width,
                                                            self.screen_grabber.digit_height])
         labels = tf.placeholder(dtype=tf.int32, shape=[None, 1])
@@ -36,7 +36,7 @@ class ScoreReader(MyEstimator):
     def read_score(self):
         predictions_gen = self.evaluation(input_generator=self.screen_grabber.grab_scores_generator())
         for predictions in predictions_gen:
-            score = np.zeros(shape=[1, 1], dtype=np.float16)
+            score = np.zeros(shape=[1, 1], dtype=np.float32)
             for (i, prediction) in enumerate(predictions):
                 score[0, 0] += (10 ** (2 - i)) * prediction
             yield score

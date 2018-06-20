@@ -44,7 +44,7 @@ class Agent:
 
     def playing(self, record_experience, score_reader=None, screen_grabber=None, simulation_mode=False):
         print(self.processed_experience)
-        if len(self.processed_experience) > 1:
+        if len(self.processed_experience) > 100:
             self.forget_experience(self.processed_experience[0][0])
         
         print("Start new game")
@@ -153,9 +153,9 @@ class Agent:
             # raw_rewards = self.create_rewards(speeds)
             samples_count = len(speeds) - 5
             np_screens = np.zeros(shape=[samples_count, screens[0].shape[0], screens[0].shape[1], 1],
-                                  dtype=np.float16)
-            np_speeds = np.zeros(shape=[samples_count, 1], dtype=np.float16)
-            np_rewards = np.zeros(shape=[samples_count, len(ActionType)], dtype=np.float16)
+                                  dtype=np.float32)
+            np_speeds = np.zeros(shape=[samples_count, 1], dtype=np.float32)
+            np_rewards = np.zeros(shape=[samples_count, len(ActionType)], dtype=np.float32)
             np_actions = np.zeros(shape=[samples_count], dtype=np.int32)
             for i in range(samples_count):
                 np_screens[i, :, :, 0] = screens[i]
@@ -190,13 +190,13 @@ class Agent:
             for elements in state_value:
                 file.write(','.join([str(i) for i in elements]) + '\n')
         # dumping screens
-        #counter = 0
-        #for screen in screens:
-        #    new_shape_screen = np.reshape(screen, newshape=[screen.shape[0], screen.shape[1]])
-        #    new_shape_screen = new_shape_screen.astype(np.uint8)
-        #    screen_file = os.path.join(directory, "{}.png".format(counter))
-        #    cv2.imwrite(screen_file, new_shape_screen)
-        #    counter += 1
+        # counter = 0
+        # for screen in screens:
+        #     new_shape_screen = np.reshape(screen, newshape=[screen.shape[0], screen.shape[1]])
+        #     new_shape_screen = new_shape_screen.astype(np.uint8)
+        #     screen_file = os.path.join(directory, "{}.png".format(counter))
+        #     cv2.imwrite(screen_file, new_shape_screen)
+        #     counter += 1
         # dumping speeds
         with open(os.path.join(directory, "speeds.txt"), mode="w") as file:
             for speed in speeds:
@@ -217,7 +217,7 @@ class Agent:
 
 def main():
     agent = Agent()
-    need_playing = True
+    need_playing = False
     need_training = True
     # if need_playing:
     #     agent.wait_to_finish_ads()
