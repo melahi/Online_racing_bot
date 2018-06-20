@@ -12,6 +12,7 @@ from Memory import Experience, Memory
 from DecisionMaker import DecisionMaker
 import numpy as np
 import tensorflow as tf
+import cv2
 
 
 class Agent:
@@ -23,12 +24,7 @@ class Agent:
                                             screen_height=self.screen_grabber.screen_position['height'])
         self.maximum_length_of_experience = 50000
         self.memory = Memory()
-        self.look_ahead_step = 10
         self.gamma = 0.925
-
-        self.good_speed = 150
-        self.not_bad_speed = 65
-        self.bad_speed = 45
 
         self.processed_experience = list()
         self.experience_loss = list()
@@ -48,8 +44,8 @@ class Agent:
 
     def playing(self, record_experience, score_reader=None, screen_grabber=None, simulation_mode=False):
         print(self.processed_experience)
-        if len(self.processed_experience) > 100:
-            self.forget_experience(self.processed_experience[51][0])
+        if len(self.processed_experience) > 1:
+            self.forget_experience(self.processed_experience[0][0])
         
         print("Start new game")
         if score_reader is None:
@@ -70,7 +66,7 @@ class Agent:
                 print("Zero speed is founded")
                 speed[0, 0] = 100
             experiences[counter].action, experiences[counter].predicted_rewards = self.decision_maker.making_decision(
-                experiences[counter].screen, experiences[counter].speed, self.lowest_reasonable_reward(speed))
+                experiences[counter].screen, experiences[counter].speed)
             if not simulation_mode:
                 experiences[counter].action.update_current_action_type()
                 experiences[counter].action.apply()
@@ -104,18 +100,6 @@ class Agent:
             my_action.press_key("s")
         time.sleep(10)
 
-    def is_successful(self, speeds):
-        for speed in speeds:
-            if speed < self.good_speed:
-                return False
-        return True
-
-    def is_failure(self, speeds):
-        for i in range(1, len(speeds)):
-            if speeds[i - 1] >= self.not_bad_speed and speeds[i] <= self.bad_speed:
-                return True
-        return False
-    
     def load_experience_loss(self):
         self.processed_experience = list()
         with open(self.loss_experience_file, "r") as loss_file:
@@ -158,42 +142,35 @@ class Agent:
                 self.experience_loss.append(100000000000.0)
         return random.choices(self.processed_experience, weights=self.experience_loss)[0]
 
-    def thinking(self, keep_normal_experience_probability=12.0):
-        for _ in range(30):
+    def thinking(self):
+        for _ in range(10):
             experience = self.selecting_an_experience()
             experience_directory = experience[0]
             experience_index = experience[1]
-            print("processing {}, with last loss: {}".format(experience_directory,self.experience_loss[experience_index]))
+            print("processing {}, with last loss: {}".format(experience_directory,
+                                                             self.experience_loss[experience_index]))
             speeds, actions, screens = self.memory.remember_experiences(experience_path=experience_directory)
-            raw_rewards = self.create_rewards(speeds)
-            np_screens = np.zeros(shape=[len(raw_rewards), screens[0].shape[0], screens[0].shape[1], 1],
+            # raw_rewards = self.create_rewards(speeds)
+            samples_count = len(speeds) - 5
+            np_screens = np.zeros(shape=[samples_count, screens[0].shape[0], screens[0].shape[1], 1],
                                   dtype=np.float16)
-            np_speeds = np.zeros(shape=[len(raw_rewards), 1], dtype=np.float16)
-            np_rewards = np.zeros(shape=[len(raw_rewards), len(ActionType)], dtype=np.float16)
-            np_actions = np.zeros(shape=[len(raw_rewards)], dtype=np.int32)
-            counter = 0
-            trace = plotly.graph_objs.Scatter(y=raw_rewards)
-            data = [trace]
-            plotly.offline.plot(data, filename="{}-rewards.html".format(experience_directory), auto_open=False)
+            np_speeds = np.zeros(shape=[samples_count, 1], dtype=np.float16)
+            np_rewards = np.zeros(shape=[samples_count, len(ActionType)], dtype=np.float16)
+            np_actions = np.zeros(shape=[samples_count], dtype=np.int32)
+            for i in range(samples_count):
+                np_screens[i, :, :, 0] = screens[i]
+                np_speeds[i, 0] = speeds[i]
+                np_actions[i] = actions[i]
+            raw_rewards = self.create_rewards(np_screens, np_speeds, experience_directory + "_analyzing")
             for i in range(len(raw_rewards)):
-                look_ahead_speeds = speeds[i:i + self.look_ahead_step]
-                if (not self.is_successful(look_ahead_speeds) and
-                        not self.is_failure(look_ahead_speeds) and
-                        random.random() > keep_normal_experience_probability):
-                    # This sample is neither a successful sample nor a failure sample, also chance doesn't select it
-                    continue
-
-                np_screens[counter, :, :, 0] = screens[i]
-                np_speeds[counter, 0] = speeds[i]
-                np_actions[counter] = actions[i]
-                np_rewards[counter, actions[i]] = raw_rewards[i]
-                counter += 1
-            print("selects {} samples from {} samples.".format(counter, len(raw_rewards)))
-            self.experience_loss[experience_index] = self.decision_maker.training(np_screens[:counter, :, :, :],
-                                                                                  np_speeds[:counter, :],
-                                                                                  np_actions[:counter],
-                                                                                  np_rewards[:counter, :])
-            self.experience_loss[experience_index] = (self.experience_loss[experience_index] / 50) ** 5
+                np_rewards[i, actions[i]] = raw_rewards[i]
+            print("selects {} samples from {} samples.".format(len(raw_rewards), len(raw_rewards)))
+            self.experience_loss[experience_index] =\
+                self.decision_maker.training(np_screens[:len(raw_rewards), :, :, :],
+                                             np_speeds[:len(raw_rewards), :],
+                                             np_actions[:len(raw_rewards)],
+                                             np_rewards[:len(raw_rewards), :])
+            self.experience_loss[experience_index] = (self.experience_loss[experience_index] / 50) ** 2
             print("Loss score of experience: {}".format(self.experience_loss[experience_index]))
             self.save_experience_loss()
 
@@ -205,29 +182,42 @@ class Agent:
             return ((speed - 100) * 1 + 39) * 0.1
         return ((speed - 150) * 5 + 89) * 0.1
 
-    def create_rewards(self, speeds):
-        rewards = []
-        for i in range(len(speeds) - self.look_ahead_step - 1):
-            # reward = experiences[i].speed
-            reward = 0
-            gamma_coefficient = 1.0
-            for j in range(1, self.look_ahead_step + 1):
-                reward += (gamma_coefficient * self.speed_reward(speeds[i + j]))
-                gamma_coefficient *= self.gamma
-            rewards.append(reward)
-        return rewards
+    def create_rewards(self, screens, speeds, directory):
+        os.makedirs(directory, exist_ok=True)
+        state_value = self.decision_maker.find_state_value(screens, speeds, 20)
+        # dumping state values
+        with open(os.path.join(directory, "predicted_state_values.csv"), mode="w") as file:
+            for elements in state_value:
+                file.write(','.join([str(i) for i in elements]) + '\n')
+        # dumping screens
+        #counter = 0
+        #for screen in screens:
+        #    new_shape_screen = np.reshape(screen, newshape=[screen.shape[0], screen.shape[1]])
+        #    new_shape_screen = new_shape_screen.astype(np.uint8)
+        #    screen_file = os.path.join(directory, "{}.png".format(counter))
+        #    cv2.imwrite(screen_file, new_shape_screen)
+        #    counter += 1
+        # dumping speeds
+        with open(os.path.join(directory, "speeds.txt"), mode="w") as file:
+            for speed in speeds:
+                file.write("{}\n".format(speed))
 
-    def lowest_reasonable_reward(self, speed):
-        lowest_reasonable_speed = speed[0, 0] - 20
-        if self.gamma == 1:
-            return self.speed_reward(lowest_reasonable_speed) * self.look_ahead_step
-        return self.speed_reward(lowest_reasonable_speed) * ((1 - self.gamma ** self.look_ahead_step) /
-                                                             (1 - self.gamma))
+        max_state_value = np.amax(state_value, axis=1)
+        rewards = []
+        for i in range(speeds.shape[0] - 1):
+            rewards.append(self.speed_reward(speeds[i][0]) + self.gamma * max_state_value[i + 1])
+
+        # ploting rewards
+        trace = plotly.graph_objs.Scatter(y=rewards)
+        data = [trace]
+        reward_file = os.path.join(directory, "rewards.html")
+        plotly.offline.plot(data, filename=reward_file, auto_open=False)   
+        return rewards
 
 
 def main():
     agent = Agent()
-    need_playing = False
+    need_playing = True
     need_training = True
     # if need_playing:
     #     agent.wait_to_finish_ads()
@@ -235,12 +225,11 @@ def main():
         if need_playing:
             agent.continue_to_play()
             agent.playing(record_experience=True, simulation_mode=False)
+            resetting_action = Action()
+            resetting_action.apply()
         if need_training:
             agent.thinking()
         break
-        
-    resetting_action = Action()
-    resetting_action.apply()
 
 
 def simulation():

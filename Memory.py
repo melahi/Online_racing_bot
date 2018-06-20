@@ -47,7 +47,7 @@ class Memory:
         directories = []
         for directory in os.listdir(self.path):
             experiences_path = os.path.join(self.path, directory)
-            if not os.path.isdir(experiences_path):
+            if not os.path.isdir(experiences_path) or experiences_path.find("analyzing") != -1:
                 continue
             directories.append(experiences_path)
         return directories

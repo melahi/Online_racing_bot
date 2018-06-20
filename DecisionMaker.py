@@ -63,8 +63,8 @@ class DecisionMaker(MyEstimator):
         prediction['value'] = q_value
         loss = tf.losses.mean_squared_error(labels=labels['q_value'],
         # loss = tf.losses.absolute_difference(labels=labels['q_value'],
-                                             predictions=q_value,
-                                             weights=tf.one_hot(indices=labels['action'], depth=len(ActionType), dtype=tf.float32))
+                                            predictions=q_value,
+                                            weights=tf.one_hot(indices=labels['action'], depth=len(ActionType), dtype=tf.float32))
         optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
         train_op = optimizer.minimize(loss=loss, global_step=tf.train.get_global_step())
         return features, labels, prediction, loss, train_op
@@ -81,19 +81,26 @@ class DecisionMaker(MyEstimator):
     def normalizing_speed(speed):
         return (speed - 125) / 250
 
-    def making_decision(self, screen, speed, lowest_reasonable_rewards):
+    def making_decision(self, screen, speed):
         if random.random() < -0.1:
             print("Choose random action")
             return self.making_random_decision(), np.zeros(shape=[1, len(ActionType)], dtype=np.float32)
         features = {'screen': self.normalizing_screen(screen), 'speed': self.normalizing_speed(speed)}
         prediction = self.continues_evaluation(feature_input=features)
         selected_action = Action(action_type=ActionType(prediction['action']))
-        # if prediction['value'][0][selected_action.action_type.value] < lowest_reasonable_rewards:
-        #     print("{}: predicting accident".format(random.randint(0, 9)))
-        #     while selected_action.action_type.value == prediction['action']:
-        #         selected_action = self.making_random_decision()
-
         return selected_action, prediction['value']
+
+    def find_state_value(self, screen, speed, batch_size=10):
+        self.terminating_continues_evaluation()
+        state_value = np.zeros([0, len(ActionType)])
+        for starting_index in range(0, screen.shape[0], batch_size):
+            features = {'screen': self.normalizing_screen(screen[starting_index: min(starting_index + batch_size,
+                                                                                     screen.shape[0])]),
+                        'speed': self.normalizing_speed(speed[starting_index: min(starting_index + batch_size,
+                                                                                  screen.shape[0])])}
+            state_value = np.concatenate((state_value, self.continues_evaluation(feature_input=features)['value']), axis=0)
+        # return np.amax(state_value, axis=1)
+        return state_value
 
     def training(self, screens, speeds, actions, rewards):
         features = {'screen': self.normalizing_screen(screens), 'speed': self.normalizing_speed(speeds)}
